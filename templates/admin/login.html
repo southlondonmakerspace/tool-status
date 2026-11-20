@@ -1,0 +1,15 @@
+{% extends "admin/login.html" %}
+{% load socialaccount %}
+
+{% block content %}
+  {% if oidc_enabled %}
+    <form method="post" action="{% provider_login_url 'sso' next=next %}">
+      {% csrf_token %}
+      <div class="submit-row">
+        <input type="submit" value="Sign in with {{ oidc_provider_name }}">
+      </div>
+    </form>
+    <p>Or sign in with a local account:</p>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
