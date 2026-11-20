@@ -68,6 +68,12 @@ class Tool(models.Model):
     def __str__(self):
         return self.name
 
+    def can_be_edited_by(self, user):
+        """Superusers can edit any tool; other users only tools in their areas."""
+        if user.is_superuser and user.is_active:
+            return True
+        return self.area_id is not None and Area.objects.editable_by(user).filter(pk=self.area_id).exists()
+
     @property
     def next_due(self):
         """Date maintenance is next due, or None if it can't be worked out."""

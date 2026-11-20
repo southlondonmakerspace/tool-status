@@ -106,3 +106,79 @@ class SiteNameTests(TestCase):
     def test_uses_configured_name(self):
         response = self.client.get(reverse("home page"))
         self.assertContains(response, "<title>Woodshop</title>", html=False)
+
+
+@override_settings(STORAGES=PLAIN_STATIC)
+class AreaPermissionTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+
+        from .models import Area
+
+        self.woodshop = Area.objects.create(name="Woodshop", slug="woodshop")
+        self.metal = Area.objects.create(name="Metal shop", slug="metal-shop")
+        self.saw = Tool.objects.create(name="Saw", functional=True, area=self.woodshop)
+        self.lathe = Tool.objects.create(name="Lathe", functional=True, area=self.metal)
+
+        self.editor = User.objects.create_user("editor", password="x", is_staff=True)
+        self.woodshop.editors.add(self.editor)
+
+        self.group_member = User.objects.create_user("member", password="x", is_staff=True)
+        group = Group.objects.create(name="Metal shop team")
+        group.user_set.add(self.group_member)
+        self.metal.editor_groups.add(group)
+
+        self.nobody = User.objects.create_user("nobody", password="x", is_staff=True)
+        self.admin = User.objects.create_superuser("admin", password="x")
+
+    def change_url(self, tool):
+        return reverse("admin:tools_tool_change", args=[tool.pk])
+
+    def test_editable_by(self):
+        from .models import Area
+
+        self.assertEqual(list(Area.objects.editable_by(self.editor)), [self.woodshop])
+        self.assertEqual(list(Area.objects.editable_by(self.group_member)), [self.metal])
+        self.assertEqual(list(Area.objects.editable_by(self.nobody)), [])
+        self.assertEqual(Area.objects.editable_by(self.admin).count(), 2)
+
+    def test_editor_only_sees_their_areas_tools(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse("admin:tools_tool_changelist"))
+        self.assertContains(response, "Saw")
+        self.assertNotContains(response, "Lathe")
+
+    def test_editor_can_edit_own_area_but_not_others(self):
+        self.client.force_login(self.editor)
+        self.assertEqual(self.client.get(self.change_url(self.saw)).status_code, 200)
+        # Tools outside the user's areas aren't in their queryset, so the admin
+        # redirects to the admin index as if the tool didn't exist.
+        self.assertNotEqual(self.client.get(self.change_url(self.lathe)).status_code, 200)
+
+    def test_group_editor_can_edit_group_area(self):
+        self.client.force_login(self.group_member)
+        self.assertEqual(self.client.get(self.change_url(self.lathe)).status_code, 200)
+        self.assertNotEqual(self.client.get(self.change_url(self.saw)).status_code, 200)
+
+    def test_editor_cannot_move_tool_into_another_area(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(self.change_url(self.saw), {
+            "name": "Saw", "area": self.metal.pk, "functional": "on",
+        })
+        self.assertEqual(response.status_code, 200)  # form re-shown with an error
+        self.saw.refresh_from_db()
+        self.assertEqual(self.saw.area, self.woodshop)
+
+    def test_staff_without_areas_has_no_tool_access(self):
+        self.client.force_login(self.nobody)
+        self.assertEqual(self.client.get(reverse("admin:tools_tool_changelist")).status_code, 403)
+
+    def test_editors_cannot_manage_areas(self):
+        self.client.force_login(self.editor)
+        self.assertEqual(self.client.get(reverse("admin:tools_area_changelist")).status_code, 403)
+
+    def test_superuser_sees_everything(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin:tools_tool_changelist"))
+        self.assertContains(response, "Saw")
+        self.assertContains(response, "Lathe")
