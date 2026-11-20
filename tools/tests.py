@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest import mock
 
 from django.contrib.auth.models import Group, User
@@ -7,7 +8,10 @@ from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
+from allauth.account.signals import user_logged_in
+
 from .models import Area, Status, Tool
+from .sso import group_names_from
 
 TODAY = date(2026, 6, 15)
 
@@ -289,3 +293,86 @@ class AdminQueryTests(TestCase):
 
     def test_area_list(self):
         self.assert_flat(reverse("admin:tools_area_changelist"))
+
+
+SSO_PROVIDERS = {
+    "openid_connect": {
+        "APPS": [
+            {
+                "provider_id": "sso",
+                "name": "Authentik",
+                "client_id": "test",
+                "secret": "test",
+                "settings": {"server_url": "https://sso.example/"},
+            }
+        ]
+    }
+}
+
+
+@override_settings(OIDC_SUPERUSER_GROUP="Systems", OIDC_GROUPS_CLAIM="groups")
+class SsoGroupSyncTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("sam")
+        self.woodshop = Area.objects.create(name="Woodshop")
+
+    def sso_login(self, user, extra_data):
+        sociallogin = SimpleNamespace(account=SimpleNamespace(extra_data=extra_data))
+        user_logged_in.send(sender=User, request=None, user=user, sociallogin=sociallogin)
+        user.refresh_from_db()
+
+    def test_groups_come_from_userinfo_then_id_token(self):
+        self.sso_login(self.user, {"userinfo": {"groups": ["Members"]}, "id_token": {"groups": ["x"]}})
+        self.assertEqual(list(self.user.groups.values_list("name", flat=True)), ["Members"])
+        self.sso_login(self.user, {"id_token": {"groups": ["Woodshop team"]}})
+        self.assertEqual(list(self.user.groups.values_list("name", flat=True)), ["Woodshop team"])
+
+    def test_claim_can_be_a_single_string(self):
+        self.assertEqual(group_names_from({"groups": " Systems "}), {"Systems"})
+        self.assertEqual(group_names_from({}), set())
+
+    def test_superuser_group_grants_and_revokes_superuser(self):
+        self.sso_login(self.user, {"userinfo": {"groups": ["Systems"]}})
+        self.assertTrue(self.user.is_superuser)
+        self.assertTrue(self.user.is_staff)
+        self.sso_login(self.user, {"userinfo": {"groups": ["Members"]}})
+        self.assertFalse(self.user.is_superuser)
+        self.assertFalse(self.user.is_staff)
+
+    @override_settings(OIDC_SUPERUSER_GROUP="")
+    def test_no_superuser_group_means_no_superusers(self):
+        self.sso_login(self.user, {"userinfo": {"groups": ["Systems"]}})
+        self.assertFalse(self.user.is_superuser)
+
+    def test_area_editor_group_gets_staff(self):
+        self.woodshop.editor_groups.add(Group.objects.create(name="Woodshop team"))
+        self.sso_login(self.user, {"userinfo": {"groups": ["Woodshop team"]}})
+        self.assertTrue(self.user.is_staff)
+        self.assertFalse(self.user.is_superuser)
+
+    def test_direct_area_editor_keeps_staff(self):
+        self.woodshop.editors.add(self.user)
+        self.sso_login(self.user, {"userinfo": {"groups": []}})
+        self.assertTrue(self.user.is_staff)
+
+    def test_password_logins_are_left_alone(self):
+        admin = User.objects.create_superuser("admin", password="x")
+        user_logged_in.send(sender=User, request=None, user=admin)
+        admin.refresh_from_db()
+        self.assertTrue(admin.is_superuser)
+
+
+@override_settings(STORAGES=PLAIN_STATIC)
+class SsoTemplateTests(TestCase):
+    def test_no_sign_in_buttons_without_oidc(self):
+        self.assertNotContains(self.client.get(reverse("home")), "Sign in")
+        self.assertNotContains(self.client.get(reverse("admin:login")), "Sign in with")
+
+    @override_settings(OIDC_ENABLED=True, OIDC_PROVIDER_NAME="Authentik", SOCIALACCOUNT_PROVIDERS=SSO_PROVIDERS)
+    def test_sign_in_buttons_with_oidc(self):
+        self.assertContains(self.client.get(reverse("home")), "Sign in")
+        self.assertContains(self.client.get(reverse("admin:login")), "Sign in with Authentik")
+
+    def test_sign_out_when_signed_in(self):
+        self.client.force_login(User.objects.create_user("sam"))
+        self.assertContains(self.client.get(reverse("home")), "Sign out")
