@@ -159,10 +159,10 @@ DEBUG=1 .venv/bin/python manage.py test
 ## Project layout
 
 ```
-core/          Django project settings and URL config
-tools/         The tools app: model, views, URLs, templates and tests
-templates/     Shared base layout, header, status badge and 404 page
-static/        Stylesheet
+core/              Django project settings and URL config
+tools/             The tools app: model, views, URLs, templates and tests
+templates/         Shared base layout, header, status badge and 404 page
+static/            Stylesheet
 Dockerfile         Image (gunicorn, non-root)
 compose.yaml       Development stack (dev server on :8000, no Caddy)
 compose.prod.yaml  Production stack (gunicorn + Caddy HTTPS)
