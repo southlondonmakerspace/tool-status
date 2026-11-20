@@ -5,7 +5,7 @@
   {% for tool in tools %}
     <div class=tool-container>
       <div class=inner-tool-container >
-      The <a href=/{{tool.name}}> {{tool.name}}</a> is 
+      The <a href="{% url 'tool page' name=tool.name %}">{{ tool.name }}</a> is 
         {% if tool.functional == True  %}
           working
         {% else %}

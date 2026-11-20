@@ -27,7 +27,7 @@
   {% if tool.functional == True %}  
     <form method="post" action="{% url 'update_tool_status' name=tool.name status='down' %}">
     {% csrf_token %}
-    <textarea name="latest_issue" rows="4" cols="50">write a brief description of the issue     </textarea>
+    <textarea name="latest_issue" rows="4" cols="50" required placeholder="Write a brief description of the issue"></textarea>
     <button type="submit">Mark {{ tool.name }} down</button>
 </form>
   {% elif tool.functional == False %}
