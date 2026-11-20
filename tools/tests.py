@@ -94,3 +94,15 @@ class ToolViewTests(TestCase):
         self.assertRedirects(
             self.client.get("/admin"), "/admin/", status_code=301, fetch_redirect_response=False
         )
+
+
+@override_settings(STORAGES=PLAIN_STATIC)
+class SiteNameTests(TestCase):
+    def test_defaults_to_tool_status(self):
+        response = self.client.get(reverse("home page"))
+        self.assertContains(response, "<title>Tool Status</title>", html=False)
+
+    @override_settings(SITE_NAME="Woodshop")
+    def test_uses_configured_name(self):
+        response = self.client.get(reverse("home page"))
+        self.assertContains(response, "<title>Woodshop</title>", html=False)

@@ -74,6 +74,7 @@ All settings come from `.env`:
 | Variable | Required | Description |
 | --- | --- | --- |
 | `SITE_DOMAIN` | Yes | Public hostname that Caddy gets a certificate for. |
+| `SITE_NAME` | No | Name shown in the header and page titles. Defaults to `Tool Status`. |
 | `DJANGO_SECRET_KEY` | Yes | Long random string. The app won't start without one unless `DEBUG` is on. |
 | `DJANGO_ALLOWED_HOSTS` | Yes | Comma-separated hostnames the app answers to. |
 | `CSRF_TRUSTED_ORIGINS` | Yes | Comma-separated origins, including the scheme, e.g. `https://woodshop.example.org`. |

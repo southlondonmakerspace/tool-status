@@ -46,6 +46,9 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
+# Name shown in the header and page titles.
+SITE_NAME = os.environ.get("SITE_NAME", "").strip() or "Tool Status"
+
 # Trust X-Forwarded-Proto from a TLS-terminating reverse proxy.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 if not DEBUG:
@@ -86,6 +89,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'tools.context_processors.site',
             ],
         },
     },
