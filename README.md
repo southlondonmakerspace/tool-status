@@ -163,7 +163,7 @@ DEBUG=1 .venv/bin/python manage.py test
 core/              Django project settings and URL config
 tools/             The tools app: model, views, URLs, templates and tests
 templates/         Shared base layout, header, status badge and 404 page
-static/            Stylesheet
+static/            Bootstrap 5.3.9 CSS (vendored)
 Dockerfile         Image (gunicorn, non-root)
 compose.yaml       Development stack (dev server on :8000, no Caddy)
 compose.prod.yaml  Production stack (gunicorn + Caddy HTTPS)

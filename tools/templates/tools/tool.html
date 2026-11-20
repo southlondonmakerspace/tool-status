@@ -3,58 +3,69 @@
 {% block title %}{{ tool.name }} · {{ site_name }}{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{% url 'home page' %}">&larr; All tools</a>
+  <a class="link-secondary text-decoration-none d-inline-block mb-3" href="{% url 'home page' %}">&larr; All tools</a>
 
-  <div class="tool-header">
-    <h1>{{ tool.name }}</h1>
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <h1 class="fw-bold mb-0">{{ tool.name }}</h1>
     {% include "status_badge.html" %}
   </div>
-  {% if tool.description %}<p class="lead">{{ tool.description }}</p>{% endif %}
+  {% if tool.description %}<p class="lead text-body-secondary mt-2">{{ tool.description }}</p>{% endif %}
 
-  <div class="panels">
-    <section class="panel">
-      <h2>Condition</h2>
-      {% if tool.functional %}
-        <p>This tool is working.</p>
-        {% if tool.latest_issue %}
-          <p class="muted small">Last reported issue: {{ tool.latest_issue }}</p>
-        {% endif %}
-        <form method="post" action="{% url 'update_tool_status' name=tool.name status='down' %}" class="stack">
-          {% csrf_token %}
-          <label for="latest_issue">Something wrong? Describe the problem</label>
-          <textarea id="latest_issue" name="latest_issue" rows="4" required placeholder="For example: blade guard is loose"></textarea>
-          <button type="submit" class="button button-danger">Report {{ tool.name }} as not working</button>
-        </form>
-      {% else %}
-        <div class="callout callout-down">
-          <strong>Not working</strong>
-          <p>{{ tool.latest_issue|default:"No details given."|linebreaksbr }}</p>
+  <div class="row g-3 mt-2">
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header text-uppercase small fw-semibold text-body-secondary">Condition</div>
+        <div class="card-body">
+          {% if tool.functional %}
+            <p>This tool is working.</p>
+            {% if tool.latest_issue %}
+              <p class="small text-body-secondary">Last reported issue: {{ tool.latest_issue }}</p>
+            {% endif %}
+            <form method="post" action="{% url 'update_tool_status' name=tool.name status='down' %}">
+              {% csrf_token %}
+              <label for="latest_issue" class="form-label fw-semibold">Something wrong? Describe the problem</label>
+              <textarea id="latest_issue" name="latest_issue" class="form-control mb-3" rows="4" required placeholder="For example: blade guard is loose"></textarea>
+              <button type="submit" class="btn btn-danger w-100">Report {{ tool.name }} as not working</button>
+            </form>
+          {% else %}
+            <div class="alert alert-danger">
+              <div class="fw-semibold">Not working</div>
+              {{ tool.latest_issue|default:"No details given."|linebreaksbr }}
+            </div>
+            <form method="post" action="{% url 'update_tool_status' name=tool.name status='up' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success">Mark {{ tool.name }} as working</button>
+            </form>
+          {% endif %}
         </div>
-        <form method="post" action="{% url 'update_tool_status' name=tool.name status='up' %}">
-          {% csrf_token %}
-          <button type="submit" class="button button-success">Mark {{ tool.name }} as working</button>
-        </form>
-      {% endif %}
-    </section>
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>Maintenance</h2>
-      <dl class="facts">
-        <div><dt>Last maintained</dt><dd>{{ tool.last_maintained|date:"j M Y"|default:"Never recorded" }}</dd></div>
-        <div><dt>Interval</dt><dd>{% if tool.maintenance_interval %}Every {{ tool.maintenance_interval }} month{{ tool.maintenance_interval|pluralize }}{% else %}Not set{% endif %}</dd></div>
-        <div><dt>Next due</dt><dd>{{ tool.next_due|date:"j M Y"|default:"—" }}</dd></div>
-      </dl>
-      {% if tool.days_remaining is not None %}
-        {% if tool.maintenance_overdue %}
-          <div class="callout callout-overdue"><strong>Maintenance is overdue.</strong></div>
-        {% else %}
-          <p class="muted">Due in {{ tool.days_remaining }} day{{ tool.days_remaining|pluralize }}.</p>
-        {% endif %}
-      {% endif %}
-      <form method="post" action="{% url 'maintain_tool' name=tool.name %}">
-        {% csrf_token %}
-        <button type="submit" class="button">I maintained {{ tool.name }} today</button>
-      </form>
-    </section>
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header text-uppercase small fw-semibold text-body-secondary">Maintenance</div>
+        <div class="card-body">
+          <dl class="row mb-3">
+            <dt class="col-6 fw-normal text-body-secondary">Last maintained</dt>
+            <dd class="col-6 text-end fw-semibold">{{ tool.last_maintained|date:"j M Y"|default:"Never recorded" }}</dd>
+            <dt class="col-6 fw-normal text-body-secondary">Interval</dt>
+            <dd class="col-6 text-end fw-semibold">{% if tool.maintenance_interval %}Every {{ tool.maintenance_interval }} month{{ tool.maintenance_interval|pluralize }}{% else %}Not set{% endif %}</dd>
+            <dt class="col-6 fw-normal text-body-secondary">Next due</dt>
+            <dd class="col-6 text-end fw-semibold mb-0">{{ tool.next_due|date:"j M Y"|default:"—" }}</dd>
+          </dl>
+          {% if tool.days_remaining is not None %}
+            {% if tool.maintenance_overdue %}
+              <div class="alert alert-warning fw-semibold">Maintenance is overdue.</div>
+            {% else %}
+              <p class="text-body-secondary">Due in {{ tool.days_remaining }} day{{ tool.days_remaining|pluralize }}.</p>
+            {% endif %}
+          {% endif %}
+          <form method="post" action="{% url 'maintain_tool' name=tool.name %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary">I maintained {{ tool.name }} today</button>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 {% endblock content %}

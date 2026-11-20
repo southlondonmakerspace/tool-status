@@ -3,9 +3,9 @@
 {% block title %}Not found · {{ site_name }}{% endblock %}
 
 {% block content %}
-  <section class="empty">
-    <h1>We couldn't find that tool</h1>
-    <p>It may have been renamed or removed.</p>
-    <a class="button" href="{% url 'home page' %}">Back to all tools</a>
-  </section>
+  <div class="text-center py-5">
+    <h1 class="h3">We couldn't find that tool</h1>
+    <p class="text-body-secondary">It may have been renamed or removed.</p>
+    <a class="btn btn-secondary" href="{% url 'home page' %}">Back to all tools</a>
+  </div>
 {% endblock %}
