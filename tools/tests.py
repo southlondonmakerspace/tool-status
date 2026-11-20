@@ -89,3 +89,8 @@ class ToolViewTests(TestCase):
         self.client.post(reverse("maintain_tool", kwargs={"name": "Band saw"}))
         self.tool.refresh_from_db()
         self.assertEqual(self.tool.last_maintained, TODAY)
+
+    def test_admin_without_slash_redirects(self):
+        self.assertRedirects(
+            self.client.get("/admin"), "/admin/", status_code=301, fetch_redirect_response=False
+        )

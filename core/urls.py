@@ -15,10 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import path, include
+from django.views.generic import RedirectView
 
 
 urlpatterns = [
+    # Without this, /admin would match the tool page route and 404.
+    path('admin', RedirectView.as_view(url='/admin/', permanent=True)),
     path('admin/', admin.site.urls),
     path("", include("tools.urls"))
 ]
