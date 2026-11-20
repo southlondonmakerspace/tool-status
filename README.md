@@ -18,8 +18,33 @@ page, with no account needed.
   until someone marks it as fixed
 - **Log maintenance**: one click records today as the last maintenance date
   and resets the countdown
-- **Admin** at `/admin/` for adding tools, descriptions and maintenance intervals
+- **Areas**, such as Woodshop or Metal shop, group the tools on the home page
+- **Admin** at `/admin/` for adding tools, descriptions and maintenance intervals,
+  with editing limited to each person's areas
 - Light and dark mode, and works on phones, so it's handy from a QR code on the tool
+
+## Areas and who can edit them
+
+Every tool belongs to an **area**. The home page shows one section per area,
+and tools with no area are listed last under "Other tools".
+
+Anyone can report a problem, mark a tool as working or log maintenance without
+logging in. Editing tools in the admin (adding, renaming, changing intervals,
+deleting) is limited by area:
+
+- **Superusers** can edit every tool and are the only ones who manage areas.
+- **Area editors** can see, add, edit and delete tools in their own areas only.
+
+To make someone an editor of an area:
+
+1. In the admin, create or open their user and tick **Staff status** so they
+   can log in. They don't need any other permissions.
+2. Open the area under **Areas** and add them to **Editors**, or add a group
+   they're in to **Editor groups**. Groups are handy for a team, such as
+   "Woodshop maintainers".
+
+When upgrading an existing database, any tools already there are put into a
+new **Woodshop** area.
 
 ## How maintenance is worked out
 
