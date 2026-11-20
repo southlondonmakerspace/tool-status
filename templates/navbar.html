@@ -1,11 +1,11 @@
 <nav class="navbar bg-body border-bottom">
   <div class="container">
-    <a class="navbar-brand d-flex align-items-center gap-2 fw-semibold" href="{% url 'home page' %}">
+    <a class="navbar-brand d-flex align-items-center gap-2 fw-semibold" href="{% url 'home' %}">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       {{ site_name }}
     </a>
     <div class="navbar-nav flex-row gap-3">
-      <a class="nav-link" href="{% url 'home page' %}">All tools</a>
+      <a class="nav-link" href="{% url 'home' %}">All tools</a>
       {% if user.is_staff %}<a class="nav-link" href="{% url 'admin:index' %}">Admin</a>{% endif %}
     </div>
   </div>

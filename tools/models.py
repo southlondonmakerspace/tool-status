@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -142,9 +143,7 @@ class Tool(models.Model):
         return {"area_slug": self.area_slug, "tool_slug": self.slug}
 
     def get_absolute_url(self):
-        from django.urls import reverse
-
-        return reverse("tool page", kwargs=self.url_kwargs)
+        return reverse("tool", kwargs=self.url_kwargs)
 
     def can_be_edited_by(self, user):
         """Superusers can edit any tool; other users only tools in their areas."""

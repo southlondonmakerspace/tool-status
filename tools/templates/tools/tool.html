@@ -5,8 +5,8 @@
 {% block content %}
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home page' %}">All tools</a></li>
-      {% if tool.area %}<li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home page' %}#{{ tool.area.slug }}">{{ tool.area.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home' %}">All tools</a></li>
+      {% if tool.area %}<li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home' %}#{{ tool.area.slug }}">{{ tool.area.name }}</a></li>{% endif %}
       <li class="breadcrumb-item active" aria-current="page">{{ tool.name }}</li>
     </ol>
   </nav>
@@ -28,18 +28,21 @@
             {% if tool.latest_issue %}
               <p class="small text-body-secondary">Last reported issue: {{ tool.latest_issue }}</p>
             {% endif %}
-            <form method="post" action="{% url 'update_tool_status' area_slug=tool.area_slug tool_slug=tool.slug status='down' %}">
+            <form method="post" action="{% url 'report_problem' area_slug=tool.area_slug tool_slug=tool.slug %}">
               {% csrf_token %}
-              <label for="latest_issue" class="form-label fw-semibold">Something wrong? Describe the problem</label>
-              <textarea id="latest_issue" name="latest_issue" class="form-control mb-3" rows="4" required placeholder="For example: blade guard is loose"></textarea>
-              <button type="submit" class="btn btn-danger w-100">Report {{ tool.name }} as not working</button>
+              {% with field=form.latest_issue %}
+                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                <textarea id="{{ field.id_for_label }}" name="{{ field.html_name }}" class="form-control{% if field.errors %} is-invalid{% endif %}" rows="4" maxlength="{{ field.field.max_length }}" required placeholder="{{ field.field.widget.attrs.placeholder }}"{% if field.errors %} aria-describedby="{{ field.id_for_label }}-error"{% endif %}>{{ field.value|default_if_none:"" }}</textarea>
+                {% for error in field.errors %}<div id="{{ field.id_for_label }}-error" class="invalid-feedback">{{ error }}</div>{% endfor %}
+              {% endwith %}
+              <button type="submit" class="btn btn-danger w-100 mt-3">Report {{ tool.name }} as not working</button>
             </form>
           {% else %}
             <div class="alert alert-danger">
               <div class="fw-semibold">Not working</div>
               {{ tool.latest_issue|default:"No details given."|linebreaksbr }}
             </div>
-            <form method="post" action="{% url 'update_tool_status' area_slug=tool.area_slug tool_slug=tool.slug status='up' %}">
+            <form method="post" action="{% url 'mark_working' area_slug=tool.area_slug tool_slug=tool.slug %}">
               {% csrf_token %}
               <button type="submit" class="btn btn-success">Mark {{ tool.name }} as working</button>
             </form>
@@ -67,7 +70,7 @@
               <p class="text-body-secondary">Due in {{ tool.days_remaining }} day{{ tool.days_remaining|pluralize }}.</p>
             {% endif %}
           {% endif %}
-          <form method="post" action="{% url 'maintain_tool' area_slug=tool.area_slug tool_slug=tool.slug %}">
+          <form method="post" action="{% url 'log_maintenance' area_slug=tool.area_slug tool_slug=tool.slug %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-secondary">I maintained {{ tool.name }} today</button>
           </form>

@@ -45,7 +45,7 @@ class ToolViewTests(TestCase):
         self.tool = Tool.objects.create(name="Band saw", functional=True)
 
     def test_home_lists_tools_without_a_schedule(self):
-        response = self.client.get(reverse("home page"))
+        response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="/other/band-saw"')
 
@@ -54,39 +54,38 @@ class ToolViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_unknown_tool_is_404(self):
-        response = self.client.get(reverse("tool page", kwargs={"area_slug": "other", "tool_slug": "nope"}))
+        response = self.client.get(reverse("tool", kwargs={"area_slug": "other", "tool_slug": "nope"}))
         self.assertEqual(response.status_code, 404)
 
-    def test_mark_down_requires_an_issue(self):
-        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "down"})
+    def test_report_problem_requires_a_description(self):
+        url = reverse("report_problem", kwargs=self.tool.url_kwargs)
         response = self.client.post(url, {"latest_issue": "  "})
         self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "is-invalid", status_code=400)
+        self.assertContains(response, "Describe the problem so the next person", status_code=400)
         self.tool.refresh_from_db()
         self.assertTrue(self.tool.functional)
 
-    def test_mark_down_and_up(self):
-        down = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "down"})
-        self.assertRedirects(self.client.post(down, {"latest_issue": "Blade snapped"}), "/other/band-saw")
+    def test_report_problem_and_mark_working(self):
+        report = reverse("report_problem", kwargs=self.tool.url_kwargs)
+        response = self.client.post(report, {"latest_issue": "  Blade snapped  "})
+        self.assertRedirects(response, "/other/band-saw")
         self.tool.refresh_from_db()
         self.assertFalse(self.tool.functional)
         self.assertEqual(self.tool.latest_issue, "Blade snapped")
 
-        up = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "up"})
-        self.client.post(up)
+        self.client.post(reverse("mark_working", kwargs=self.tool.url_kwargs))
         self.tool.refresh_from_db()
         self.assertTrue(self.tool.functional)
 
-    def test_unknown_status_is_400(self):
-        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "sideways"})
-        self.assertEqual(self.client.post(url).status_code, 400)
-
-    def test_status_update_rejects_get(self):
-        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "up"})
-        self.assertEqual(self.client.get(url).status_code, 405)
+    def test_actions_reject_get(self):
+        for name in ("report_problem", "mark_working", "log_maintenance"):
+            url = reverse(name, kwargs=self.tool.url_kwargs)
+            self.assertEqual(self.client.get(url).status_code, 405, name)
 
     @mock.patch("tools.views.timezone.localdate", return_value=TODAY)
     def test_log_maintenance(self, _):
-        self.client.post(reverse("maintain_tool", kwargs=self.tool.url_kwargs))
+        self.client.post(reverse("log_maintenance", kwargs=self.tool.url_kwargs))
         self.tool.refresh_from_db()
         self.assertEqual(self.tool.last_maintained, TODAY)
 
@@ -99,15 +98,15 @@ class ToolViewTests(TestCase):
 @override_settings(STORAGES=PLAIN_STATIC)
 class SiteNameTests(TestCase):
     def test_empty_home_page(self):
-        self.assertContains(self.client.get(reverse("home page")), "No tools yet")
+        self.assertContains(self.client.get(reverse("home")), "No tools yet")
 
     def test_defaults_to_tool_status(self):
-        response = self.client.get(reverse("home page"))
+        response = self.client.get(reverse("home"))
         self.assertContains(response, "<title>Tool Status</title>", html=False)
 
     @override_settings(SITE_NAME="Woodshop")
     def test_uses_configured_name(self):
-        response = self.client.get(reverse("home page"))
+        response = self.client.get(reverse("home"))
         self.assertContains(response, "<title>Woodshop</title>", html=False)
 
 
@@ -188,7 +187,7 @@ class AreaPermissionTests(TestCase):
 
     def test_home_groups_tools_by_area(self):
         Tool.objects.create(name="Loose tool", functional=True)
-        response = self.client.get(reverse("home page"))
+        response = self.client.get(reverse("home"))
         self.assertContains(response, 'id="woodshop"')
         self.assertContains(response, "Metal shop")
         self.assertContains(response, "Other tools")
