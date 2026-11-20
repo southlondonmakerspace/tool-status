@@ -51,6 +51,38 @@ To make someone an editor of an area:
 When upgrading an existing database, any tools already there are put into a
 new **Woodshop** area.
 
+## Single sign-on (OpenID Connect)
+
+People can sign in with an OpenID Connect provider such as Authentik. It's
+off until `OIDC_CLIENT_ID` is set. When it's on, there's a **Sign in** link
+in the header and a **Sign in with …** button on the admin login page. The
+admin's password login still works, so a local superuser can always get in.
+
+Each time someone signs in with SSO:
+
+- Their Django groups are set to exactly the groups in the token's groups
+  claim. Groups are created as needed, so a group called "Woodshop team" in
+  the provider can be added to an area's **Editor groups**.
+- They're a **superuser** while they're in `OIDC_SUPERUSER_GROUP` (for
+  example `Systems`), and stop being one when they leave it.
+- They get **staff status** (admin access) while they're a superuser or an
+  editor of at least one area.
+
+Changes in the provider take effect the next time the person signs in.
+Users who sign in with a password are never changed.
+
+### Setting it up in Authentik
+
+1. Create an **OAuth2/OpenID Provider** with a confidential client, and set
+   its redirect URI to `https://<your domain>/accounts/oidc/sso/login/callback/`.
+   Keep the default `openid`, `email` and `profile` scopes; Authentik's
+   profile scope includes a `groups` claim.
+2. Create an **Application** that uses the provider, and bind the groups or
+   users who should be able to sign in.
+3. Add the client ID, client secret and the provider's **OpenID Configuration
+   Issuer** URL to `.env` as `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and
+   `OIDC_SERVER_URL`, then restart the app.
+
 ## How maintenance is worked out
 
 Each tool has a **last maintained** date and a **maintenance interval** in
@@ -112,6 +144,12 @@ All settings come from `.env`:
 | `SECURE_COOKIES` | No | Defaults to `true`. Set to `false` only if the site is served over plain HTTP. |
 | `TIME_ZONE` | No | The space's time zone, used for the date when maintenance is logged. Defaults to `Europe/London`. |
 | `DJANGO_DB_PATH` | No | Path to the SQLite file. The Docker image sets it to `/app/data/db.sqlite3`. |
+| `OIDC_CLIENT_ID` | No | Turns on single sign-on. See [Single sign-on](#single-sign-on-openid-connect). |
+| `OIDC_CLIENT_SECRET` | With SSO | The client secret from the provider. |
+| `OIDC_SERVER_URL` | With SSO | The provider's issuer URL, such as `https://auth.example.org/application/o/tool-status/`. |
+| `OIDC_PROVIDER_NAME` | No | Label on the sign-in button. Defaults to `SSO`. |
+| `OIDC_GROUPS_CLAIM` | No | Token claim that lists the user's groups. Defaults to `groups`. |
+| `OIDC_SUPERUSER_GROUP` | No | Members of this group become superusers, such as `Systems`. Empty means none. |
 
 ### Backups and moving a database
 
