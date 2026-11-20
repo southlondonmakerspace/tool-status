@@ -14,7 +14,7 @@ DAYS_PER_MONTH = 30
 NO_AREA_SLUG = "other"
 
 # First path segments an area must never take over.
-RESERVED_AREA_SLUGS = {"admin", "static", NO_AREA_SLUG}
+RESERVED_AREA_SLUGS = {"accounts", "admin", "static", NO_AREA_SLUG}
 
 
 class Status(models.TextChoices):

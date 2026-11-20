@@ -34,7 +34,7 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
-# Trust X-Forwarded-Proto from the TLS-terminating reverse proxy (Caddy).
+# Trust X-Forwarded-Proto from the TLS-terminating reverse proxy.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 if not DEBUG:
     SESSION_COOKIE_SECURE = env_bool("SECURE_COOKIES", True)
@@ -47,6 +47,50 @@ if not DEBUG:
 SITE_NAME = os.environ.get("SITE_NAME", "").strip() or "Tool Status"
 
 
+# Single sign-on (OpenID Connect), on when OIDC_CLIENT_ID is set.
+# See tools/sso.py for how groups, staff and superuser are synced.
+
+OIDC_ENABLED = bool(os.environ.get("OIDC_CLIENT_ID"))
+OIDC_PROVIDER_ID = "sso"
+OIDC_PROVIDER_NAME = os.environ.get("OIDC_PROVIDER_NAME", "").strip() or "SSO"
+# Claim holding the user's group names (Authentik sends "groups").
+OIDC_GROUPS_CLAIM = os.environ.get("OIDC_GROUPS_CLAIM", "").strip() or "groups"
+# Members of this identity-provider group become Django superusers.
+OIDC_SUPERUSER_GROUP = os.environ.get("OIDC_SUPERUSER_GROUP", "").strip()
+
+SOCIALACCOUNT_PROVIDERS = {
+    "openid_connect": {
+        "OAUTH_PKCE_ENABLED": True,
+        "APPS": [
+            {
+                "provider_id": OIDC_PROVIDER_ID,
+                "name": OIDC_PROVIDER_NAME,
+                "client_id": os.environ.get("OIDC_CLIENT_ID", ""),
+                "secret": os.environ.get("OIDC_CLIENT_SECRET", ""),
+                "settings": {"server_url": os.environ.get("OIDC_SERVER_URL", "")},
+            }
+        ]
+        if OIDC_ENABLED
+        else [],
+    }
+}
+# Sign-in on the site is SSO only; the admin's own password login stays
+# available for a break-glass superuser.
+SOCIALACCOUNT_ONLY = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_STORE_TOKENS = False
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_LOGOUT_ON_GET = False
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "account_login"
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+
 # Application
 
 INSTALLED_APPS = [
@@ -56,6 +100,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
     "tools",
 ]
 
@@ -68,6 +116,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"

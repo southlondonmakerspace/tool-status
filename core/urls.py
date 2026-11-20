@@ -6,5 +6,6 @@ urlpatterns = [
     # Without this, /admin would match the legacy tool route and 404.
     path("admin", RedirectView.as_view(url="/admin/", permanent=True)),
     path("admin/", admin.site.urls),
+    path("accounts/", include("allauth.urls")),
     path("", include("tools.urls")),
 ]
