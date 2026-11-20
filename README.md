@@ -33,9 +33,9 @@ last maintained + interval × 30 days
 If either value is missing, the tool shows "No maintenance schedule" and is
 never flagged as due.
 
-## Running it (Docker)
+## Running it in production (Docker)
 
-The stack is two containers, defined in [`compose.yaml`](compose.yaml):
+The production stack is two containers, defined in [`compose.prod.yaml`](compose.prod.yaml):
 
 | Service | What it does |
 | --- | --- |
@@ -58,13 +58,13 @@ The stack is two containers, defined in [`compose.yaml`](compose.yaml):
 3. Start it:
 
    ```bash
-   docker compose up -d --build
+   docker compose -f compose.prod.yaml up -d --build
    ```
 
 4. Create an admin user, then add tools at `https://<your domain>/admin/`:
 
    ```bash
-   docker compose exec web python manage.py createsuperuser
+   docker compose -f compose.prod.yaml exec web python manage.py createsuperuser
    ```
 
 ### Configuration
@@ -88,25 +88,43 @@ The database is a single SQLite file in the `woodcode-data` volume.
 Copy it out:
 
 ```bash
-docker compose cp web:/app/data/db.sqlite3 ./backup.sqlite3
+docker compose -f compose.prod.yaml cp web:/app/data/db.sqlite3 ./backup.sqlite3
 ```
 
 Copy an existing database in:
 
 ```bash
-docker compose cp ./db.sqlite3 web:/app/data/db.sqlite3
+docker compose -f compose.prod.yaml cp ./db.sqlite3 web:/app/data/db.sqlite3
 ```
 
 ```bash
-docker compose restart web
+docker compose -f compose.prod.yaml restart web
 ```
 
 ### Already running caddy-docker-proxy on the host?
 
-Remove the `caddy` service from `compose.yaml` and mark the `caddy` network as
-`external: true`, so `web` joins the existing proxy's network.
+Remove the `caddy` service from `compose.prod.yaml` and mark the `caddy`
+network as `external: true`, so `web` joins the existing proxy's network.
 
 ## Local development
+
+### With Docker
+
+The default [`compose.yaml`](compose.yaml) is a development stack with no
+Caddy and no HTTPS. It runs Django's dev server with debug on and your working
+copy mounted, so changes reload without a rebuild. It needs no `.env`.
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:8000. To create an admin user:
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+### Without Docker
 
 You need Python 3.12 or newer.
 
@@ -145,8 +163,9 @@ core/          Django project settings and URL config
 tools/         The tools app: model, views, URLs, templates and tests
 templates/     Shared base layout, header, status badge and 404 page
 static/        Stylesheet
-Dockerfile     Production image (gunicorn, non-root)
-compose.yaml   web + Caddy stack
+Dockerfile         Image (gunicorn, non-root)
+compose.yaml       Development stack (dev server on :8000, no Caddy)
+compose.prod.yaml  Production stack (gunicorn + Caddy HTTPS)
 ```
 
 ## Known limitations

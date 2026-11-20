@@ -1,0 +1,44 @@
+# Production stack:
+#   docker compose -f compose.prod.yaml up -d --build
+#
+# gunicorn behind caddy-docker-proxy, which reads the `caddy` labels on `web`
+# through the Docker socket and serves SITE_DOMAIN over HTTPS with an
+# automatic Let's Encrypt certificate. Settings come from .env.
+
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.13-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CADDY_INGRESS_NETWORKS: caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - caddy-data:/data
+    networks:
+      - caddy
+
+  web:
+    build: .
+    container_name: woodcode
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - woodcode-data:/app/data
+    networks:
+      - caddy
+    labels:
+      caddy: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+
+networks:
+  caddy:
+    name: caddy
+
+volumes:
+  caddy-data:
+  woodcode-data:

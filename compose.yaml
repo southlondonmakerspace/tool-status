@@ -1,39 +1,24 @@
-services:
-  caddy:
-    # Watches the Docker socket and builds its config from container labels,
-    # getting and renewing Let's Encrypt certificates automatically.
-    image: lucaslorentz/caddy-docker-proxy:2.13-alpine
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      CADDY_INGRESS_NETWORKS: caddy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - caddy-data:/data
-    networks:
-      - caddy
+# Development stack: `docker compose up`
+#
+# Runs Django's dev server on http://localhost:8000 with your working copy
+# mounted, so code and template changes reload without a rebuild.
+# Production adds Caddy and gunicorn; see compose.prod.yaml.
 
+services:
   web:
     build: .
-    container_name: woodcode
-    restart: unless-stopped
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    ports:
+      - "8000:8000"
     volumes:
+      - .:/app
       - woodcode-data:/app/data
-    networks:
-      - caddy
-    labels:
-      caddy: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
-      caddy.reverse_proxy: "{{upstreams 8000}}"
-
-networks:
-  caddy:
-    name: caddy
 
 volumes:
-  caddy-data:
   woodcode-data:
