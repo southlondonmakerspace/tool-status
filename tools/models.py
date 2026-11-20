@@ -1,13 +1,59 @@
 from datetime import timedelta
 
+from django.conf import settings
+from django.contrib.auth.models import Group
 from django.db import models
 from django.utils import timezone
 
 DAYS_PER_MONTH = 30
 
 
+class AreaQuerySet(models.QuerySet):
+    def editable_by(self, user):
+        """Areas the user may edit tools in: all for superusers, otherwise
+        those listing the user, or one of their groups, as an editor."""
+        if not user.is_active:
+            return self.none()
+        if user.is_superuser:
+            return self.all()
+        return self.filter(
+            models.Q(editors=user) | models.Q(editor_groups__in=user.groups.all())
+        ).distinct()
+
+
+class Area(models.Model):
+    """A part of the space, such as the woodshop, that tools belong to."""
+
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    editors = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="editable_areas",
+        help_text="Users who can add and edit tools in this area. They also need staff status to log in.",
+    )
+    editor_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        related_name="editable_areas",
+        help_text="Groups whose members can add and edit tools in this area.",
+    )
+
+    objects = AreaQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Tool(models.Model):
     name = models.CharField(max_length=50, primary_key=True)
+    area = models.ForeignKey(
+        Area, on_delete=models.PROTECT, null=True, blank=True, related_name="tools"
+    )
     description = models.CharField(max_length=200, null=True, blank=True)
     functional = models.BooleanField()
     last_maintained = models.DateField(null=True, blank=True)
