@@ -15,7 +15,7 @@ from allauth.core import context
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import complete_social_login
 
-from .models import Area, Status, Tool
+from .models import Area, SsoSession, Status, Tool
 from .sso import group_names_from, sync_user
 
 TODAY = date(2026, 6, 15)
@@ -408,6 +408,7 @@ class SsoSignupTests(TestCase):
         self.sso_login(sub="1", email="sam@example.org", preferred_username="sam")
         user = User.objects.get()
         self.assertEqual((user.username, user.email), ("sam", "sam@example.org"))
+        self.assertEqual(SsoSession.objects.get().user, user)
 
     def test_signs_in_to_existing_account_with_same_email(self):
         User.objects.create_user("tom", "tom@example.org", "x")
@@ -489,3 +490,121 @@ class SsoLinkTests(TestCase):
         response = self.client.get("/accounts/oidc/sso/login/?next=/")
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response["Location"].startswith("https://sso.example/authorize/"))
+
+
+def make_logout_token(private_key, **overrides):
+    import time
+
+    import jwt
+
+    claims = {
+        "iss": "https://sso.example/",
+        "aud": "test",
+        "iat": int(time.time()),
+        "jti": "abc",
+        "events": {"http://schemas.openid.net/event/backchannel-logout": {}},
+        "sub": "sub-1",
+    }
+    claims.update(overrides)
+    claims = {k: v for k, v in claims.items() if v is not None}
+    return jwt.encode(claims, private_key, algorithm="RS256", headers={"kid": "k1"})
+
+
+SSO_CONFIG = {
+    "issuer": "https://sso.example/",
+    "jwks_uri": "https://sso.example/jwks/",
+    "end_session_endpoint": "https://sso.example/end-session/",
+}
+
+
+@override_settings(STORAGES=PLAIN_STATIC, OIDC_ENABLED=True, SOCIALACCOUNT_PROVIDERS=SSO_PROVIDERS)
+@mock.patch("tools.sso.openid_config", return_value=SSO_CONFIG)
+class SsoLogoutTests(TestCase):
+    def setUp(self):
+        from allauth.socialaccount.models import SocialAccount
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        jwks = mock.patch("tools.sso.jwt.PyJWKClient")
+        client = jwks.start()
+        self.addCleanup(jwks.stop)
+        client.return_value.get_signing_key_from_jwt.return_value = SimpleNamespace(
+            key=self.private_key.public_key()
+        )
+        self.user = User.objects.create_user("sam")
+        SocialAccount.objects.create(user=self.user, provider="sso", uid="sub-1")
+        self.url = reverse("sso_backchannel_logout")
+
+    def sso_session(self, client, sid=""):
+        client.force_login(self.user)
+        session = client.session
+        session["tools_sso_login"] = True
+        session.save()
+        return SsoSession.objects.create(session_key=session.session_key, user=self.user, sid=sid)
+
+    def signed_in(self, client):
+        return "Sign out" in client.get(reverse("home")).content.decode()
+
+    def post_token(self, **claims):
+        token = make_logout_token(self.private_key, **claims)
+        return self.client.post(self.url, {"logout_token": token})
+
+    def test_logout_by_sub_ends_every_session_of_that_user(self, _):
+        laptop, phone = self.client_class(), self.client_class()
+        self.sso_session(laptop)
+        self.sso_session(phone)
+        self.assertEqual(self.post_token().status_code, 200)
+        self.assertFalse(self.signed_in(laptop))
+        self.assertFalse(self.signed_in(phone))
+        self.assertFalse(SsoSession.objects.exists())
+
+    def test_logout_by_sid_ends_only_that_session(self, _):
+        laptop, phone = self.client_class(), self.client_class()
+        self.sso_session(laptop, sid="s1")
+        self.sso_session(phone, sid="s2")
+        self.assertEqual(self.post_token(sid="s1").status_code, 200)
+        self.assertFalse(self.signed_in(laptop))
+        self.assertTrue(self.signed_in(phone))
+
+    def test_unknown_subject_is_fine(self, _):
+        self.assertEqual(self.post_token(sub="someone-else").status_code, 200)
+
+    def test_rejects_bad_tokens(self, _):
+        other_key = __import__(
+            "cryptography.hazmat.primitives.asymmetric.rsa", fromlist=["rsa"]
+        ).generate_private_key(public_exponent=65537, key_size=2048)
+        browser = self.client_class()
+        self.sso_session(browser)
+        bad = [
+            {"logout_token": make_logout_token(other_key)},
+            {"logout_token": make_logout_token(self.private_key, aud="someone-else")},
+            {"logout_token": make_logout_token(self.private_key, iss="https://evil.example/")},
+            {"logout_token": make_logout_token(self.private_key, events={})},
+            {"logout_token": make_logout_token(self.private_key, nonce="n")},
+            {"logout_token": make_logout_token(self.private_key, sub=None)},
+            {"logout_token": "not-a-jwt"},
+            {},
+        ]
+        for data in bad:
+            with self.subTest(data=data):
+                self.assertEqual(self.client.post(self.url, data).status_code, 400)
+        self.assertTrue(self.signed_in(browser))
+
+    def test_get_is_not_allowed(self, _):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_sign_out_also_ends_the_provider_session(self, _):
+        self.sso_session(self.client)
+        response = self.client.post(reverse("account_logout"))
+        self.assertTrue(response["Location"].startswith("https://sso.example/end-session/?"))
+        self.assertIn("post_logout_redirect_uri=http%3A%2F%2Ftestserver%2F", response["Location"])
+        self.assertFalse(SsoSession.objects.exists())
+
+    def test_admin_log_out_also_ends_the_provider_session(self, _):
+        self.sso_session(self.client)
+        response = self.client.post("/admin/logout/")
+        self.assertTrue(response["Location"].startswith("https://sso.example/end-session/?"))
+
+    def test_password_sign_out_stays_local(self, _):
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.post(reverse("account_logout"))["Location"], "/")

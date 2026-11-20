@@ -80,6 +80,12 @@ If the username is taken by another account, a number is added to it.
 Changes in the provider take effect the next time the person signs in.
 Users who sign in with a password are never changed.
 
+### Signing out
+
+Signing out of Tool Status, from the header or the admin, also signs you out
+of the provider when you signed in with SSO. Signing out of the provider ends
+your Tool Status sessions too, through OpenID Connect back-channel logout.
+
 ### Setting it up in Authentik
 
 1. Create an **OAuth2/OpenID Provider** with a confidential client, and set
@@ -90,7 +96,10 @@ Users who sign in with a password are never changed.
    users who should be able to sign in.
    Because sign-in trusts the provider's email address, don't let users
    change their own email in Authentik's user settings flow.
-3. Add the client ID, client secret and the provider's **OpenID Configuration
+3. On the provider, set the **Back-channel logout URI** to
+   `https://<your domain>/accounts/oidc/sso/backchannel-logout/`, so signing
+   out of Authentik signs people out here too.
+4. Add the client ID, client secret and the provider's **OpenID Configuration
    Issuer** URL to `.env` as `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and
    `OIDC_SERVER_URL`, then restart the app.
 

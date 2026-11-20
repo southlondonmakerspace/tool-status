@@ -188,3 +188,17 @@ class Tool(models.Model):
     @property
     def status_color(self):
         return STATUS_COLORS[self.status]
+
+
+class SsoSession(models.Model):
+    """A Django session started by SSO login, so the identity provider's
+    back-channel logout can end it."""
+
+    session_key = models.CharField(max_length=40, primary_key=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sso_sessions")
+    # The provider's session ID ("sid" claim), if it sends one.
+    sid = models.CharField(max_length=255, blank=True, db_index=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "SSO session"
