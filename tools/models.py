@@ -82,7 +82,7 @@ class Area(models.Model):
 
 
 class Tool(models.Model):
-    name = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(
         max_length=50, editable=False, help_text="Used in the tool's URL; made from the name. Unique within its area."
     )

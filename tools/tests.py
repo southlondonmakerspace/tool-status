@@ -257,3 +257,12 @@ class SlugTests(TestCase):
         Tool.objects.create(name="Band saw", functional=True, area=self.woodshop)
         response = self.client.get("/Band%20saw")
         self.assertRedirects(response, "/woodshop/band-saw", status_code=301, fetch_redirect_response=False)
+
+
+class RenameTests(TestCase):
+    def test_renaming_a_tool_keeps_one_row(self):
+        tool = Tool.objects.create(name="Band saw", functional=True)
+        tool.name = "Big band saw"
+        tool.save()
+        self.assertEqual(Tool.objects.count(), 1)
+        self.assertEqual(Tool.objects.get().slug, "big-band-saw")
