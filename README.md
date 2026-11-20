@@ -148,7 +148,7 @@ All settings come from `.env`:
 | `SITE_NAME` | No | Name shown in the header and page titles. Defaults to `Tool Status`. |
 | `DJANGO_SECRET_KEY` | Yes | Long random string. The app won't start without one unless `DEBUG` is on. |
 | `DJANGO_ALLOWED_HOSTS` | Yes | Comma-separated hostnames the app answers to. |
-| `CSRF_TRUSTED_ORIGINS` | Yes | Comma-separated origins, including the scheme, e.g. `https://woodshop.example.org`. |
+| `CSRF_TRUSTED_ORIGINS` | Yes | Comma-separated origins, including the scheme, e.g. `https://toolstatus.southlondonmakerspace.org`. |
 | `DEBUG` | No | `true` to turn on debug pages. Never use it in production. Defaults to `false`. |
 | `SECURE_COOKIES` | No | Defaults to `true`. Set to `false` only if the site is served over plain HTTP. |
 | `TIME_ZONE` | No | The space's time zone, used for the date when maintenance is logged. Defaults to `Europe/London`. |
