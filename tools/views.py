@@ -16,16 +16,16 @@ from datetime import timedelta, datetime, date
 def home_view(request):
     tools = Tool.objects.all()
     for tool in tools:
-        tool.needs_maintainance=  (date.today()+ timedelta(tool.maintanance_interval*30)).strftime("%Y-%m-%d")
-        tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintanance_interval * 30)) - date.today())
+        tool.needs_maintainance=  (date.today()+ timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
+        tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintenance_interval * 30)) - date.today())
 
     context = {"tools":tools}
     return render(request, "tools/home.html", context)
 
 def tool_view(request, name):
     tool = Tool.objects.get(name=name)
-    tool.needs_maintainance =  (tool.last_maintained + timedelta(tool.maintanance_interval*30)).strftime("%Y-%m-%d")
-    tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintanance_interval * 30)) - date.today())
+    tool.needs_maintainance =  (tool.last_maintained + timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
+    tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintenance_interval * 30)) - date.today())
     context = {"tool":tool}
     return render(request, "tools/tool.html", context)
 
@@ -49,7 +49,7 @@ def tool_status_update(request, name, status):
 @require_http_methods(["POST"])
 def tool_maintained(request, name):
     tool = Tool.objects.get(name=name)
-    Needs_maintainance = (datetime.now() + timedelta(tool.maintanance_interval*30)).strftime("%Y-%m-%d")
+    Needs_maintainance = (datetime.now() + timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
     tool.last_maintained = datetime.now().strftime("%Y-%m-%d")
     tool.save(update_fields=["last_maintained"])
     return redirect("tool page", name=name) 
