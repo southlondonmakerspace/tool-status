@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db.models import F
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -8,12 +9,17 @@ from .models import Tool
 
 
 def home_view(request):
-    return render(request, "tools/home.html", {"tools": Tool.objects.all()})
+    # Grouped by area in the template; tools without an area come last.
+    tools = Tool.objects.select_related("area").order_by(
+        F("area__name").asc(nulls_last=True), "name"
+    )
+    return render(request, "tools/home.html", {"tools": tools})
 
 
 def tool_view(request, name):
-    tool = get_object_or_404(Tool, name=name)
-    return render(request, "tools/tool.html", {"tool": tool})
+    tool = get_object_or_404(Tool.objects.select_related("area"), name=name)
+    can_edit = request.user.is_staff and tool.can_be_edited_by(request.user)
+    return render(request, "tools/tool.html", {"tool": tool, "can_edit": can_edit})
 
 
 @require_POST

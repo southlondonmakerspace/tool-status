@@ -182,3 +182,17 @@ class AreaPermissionTests(TestCase):
         response = self.client.get(reverse("admin:tools_tool_changelist"))
         self.assertContains(response, "Saw")
         self.assertContains(response, "Lathe")
+
+    def test_home_groups_tools_by_area(self):
+        Tool.objects.create(name="Loose tool", functional=True)
+        response = self.client.get(reverse("home page"))
+        self.assertContains(response, 'id="woodshop"')
+        self.assertContains(response, "Metal shop")
+        self.assertContains(response, "Other tools")
+
+    def test_edit_link_only_for_area_editors(self):
+        url = reverse("tool page", kwargs={"name": "Saw"})
+        self.client.force_login(self.editor)
+        self.assertContains(self.client.get(url), "Edit in admin")
+        self.client.force_login(self.group_member)
+        self.assertNotContains(self.client.get(url), "Edit in admin")

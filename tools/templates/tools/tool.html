@@ -3,11 +3,18 @@
 {% block title %}{{ tool.name }} · {{ site_name }}{% endblock %}
 
 {% block content %}
-  <a class="link-secondary text-decoration-none d-inline-block mb-3" href="{% url 'home page' %}">&larr; All tools</a>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home page' %}">All tools</a></li>
+      {% if tool.area %}<li class="breadcrumb-item"><a class="link-secondary" href="{% url 'home page' %}#{{ tool.area.slug }}">{{ tool.area.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item active" aria-current="page">{{ tool.name }}</li>
+    </ol>
+  </nav>
 
   <div class="d-flex flex-wrap align-items-center gap-3">
     <h1 class="fw-bold mb-0">{{ tool.name }}</h1>
     {% include "status_badge.html" %}
+    {% if can_edit %}<a class="btn btn-sm btn-outline-secondary ms-md-auto" href="{% url 'admin:tools_tool_change' tool.pk %}">Edit in admin</a>{% endif %}
   </div>
   {% if tool.description %}<p class="lead text-body-secondary mt-2">{{ tool.description }}</p>{% endif %}
 

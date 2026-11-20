@@ -7,15 +7,22 @@
   </div>
 
   {% if tools %}
+    {% regroup tools by area as areas %}
+    {% for group in areas %}
+    <section class="mb-5" {% if group.grouper %}id="{{ group.grouper.slug }}"{% endif %}>
+      <div class="d-flex align-items-baseline gap-2 border-bottom pb-2 mb-3">
+        <h2 class="h4 mb-0">{{ group.grouper.name|default:"Other tools" }}</h2>
+        {% if group.grouper.description %}<span class="text-body-secondary small">{{ group.grouper.description }}</span>{% endif %}
+      </div>
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-      {% for tool in tools %}
+      {% for tool in group.list %}
         <div class="col">
           <div class="card h-100 shadow-sm border-0 border-start border-4 {% if tool.status == 'down' %}border-danger{% elif tool.status == 'overdue' %}border-warning{% else %}border-success{% endif %}">
             <div class="card-body d-flex flex-column">
               <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                <h2 class="h5 card-title mb-0">
+                <h3 class="h5 card-title mb-0">
                   <a class="stretched-link text-body text-decoration-none" href="{% url 'tool page' name=tool.name %}">{{ tool.name }}</a>
-                </h2>
+                </h3>
                 {% include "status_badge.html" %}
               </div>
               {% if tool.description %}<p class="card-text text-body-secondary">{{ tool.description }}</p>{% endif %}
@@ -35,6 +42,8 @@
         </div>
       {% endfor %}
     </div>
+    </section>
+    {% endfor %}
   {% else %}
     <div class="text-center py-5">
       <h2 class="h4">No tools yet</h2>
