@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -89,13 +90,16 @@ class Tool(models.Model):
     area = models.ForeignKey(
         Area, on_delete=models.PROTECT, null=True, blank=True, related_name="tools"
     )
-    description = models.CharField(max_length=200, null=True, blank=True)
-    functional = models.BooleanField()
+    description = models.CharField(max_length=200, blank=True)
+    functional = models.BooleanField(default=True)
     last_maintained = models.DateField(null=True, blank=True)
-    maintenance_interval = models.IntegerField(
-        null=True, blank=True, help_text="Months between maintenance"
+    maintenance_interval = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Months between maintenance. Leave blank if it has no schedule.",
     )
-    latest_issue = models.TextField(null=True, blank=True)
+    latest_issue = models.TextField(blank=True)
 
     class Meta:
         ordering = ["name"]
