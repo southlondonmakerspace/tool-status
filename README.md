@@ -39,6 +39,8 @@ deleting) is limited by area:
 
 - **Superusers** can edit every tool and are the only ones who manage areas.
 - **Area editors** can see, add, edit and delete tools in their own areas only.
+- **Groups with permissions**: give a group Tool or Area permissions in the
+  admin and its members can do that across every area.
 
 To make someone an editor of an area:
 
@@ -65,8 +67,8 @@ Each time someone signs in with SSO:
   the provider can be added to an area's **Editor groups**.
 - They're a **superuser** while they're in `OIDC_SUPERUSER_GROUP` (for
   example `Systems`), and stop being one when they leave it.
-- They get **staff status** (admin access) while they're a superuser or an
-  editor of at least one area.
+- They get **staff status** (admin access) while they're a superuser, an
+  editor of at least one area, or in a group that has permissions in the admin.
 
 Their email and username come from the provider, with no sign-up form. If
 an account here already has the same email, such as one made with

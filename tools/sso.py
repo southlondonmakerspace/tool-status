@@ -5,15 +5,16 @@ On every SSO login:
   claim, creating any that don't exist yet (so groups are managed in the
   identity provider, not the Django admin);
 - they're a superuser only while they're in OIDC_SUPERUSER_GROUP;
-- they get staff status (needed to open the admin) while they're a superuser
-  or an editor of any area, directly or through one of those groups.
+- they get staff status (needed to open the admin) while they're a superuser,
+  an editor of any area (directly or through one of those groups), or in a
+  group that has been given permissions in the admin.
 
 Users who log in with a password, such as a break-glass admin, are untouched.
 """
 
 from allauth.account.signals import user_logged_in
 from django.conf import settings
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.db import transaction
 from django.db.models import Q
 from django.dispatch import receiver
@@ -41,7 +42,8 @@ def sync_user(user, group_names):
     superuser_group = settings.OIDC_SUPERUSER_GROUP
     user.is_superuser = bool(superuser_group) and superuser_group in group_names
     edits_an_area = Area.objects.filter(Q(editors=user) | Q(editor_groups__in=groups)).exists()
-    user.is_staff = user.is_superuser or edits_an_area
+    has_group_permissions = Permission.objects.filter(group__in=groups).exists()
+    user.is_staff = user.is_superuser or edits_an_area or has_group_permissions
     user.save(update_fields=["is_superuser", "is_staff"])
 
 

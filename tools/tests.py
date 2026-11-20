@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest import mock
 
-from django.contrib.auth.models import AnonymousUser, Group, User
+from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import connection
@@ -16,7 +16,7 @@ from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import complete_social_login
 
 from .models import Area, Status, Tool
-from .sso import group_names_from
+from .sso import group_names_from, sync_user
 
 TODAY = date(2026, 6, 15)
 
@@ -421,3 +421,54 @@ class SsoSignupTests(TestCase):
         self.sso_login(sub="3", email="sam@example.org", preferred_username="sam")
         self.assertEqual(User.objects.count(), 2)
         self.assertNotEqual(User.objects.get(email="sam@example.org").username, "sam")
+
+
+@override_settings(STORAGES=PLAIN_STATIC)
+class GroupPermissionTests(TestCase):
+    """A group given Tool/Area permissions in the admin works across every area."""
+
+    def setUp(self):
+        self.woodshop = Area.objects.create(name="Woodshop")
+        self.metal = Area.objects.create(name="Metal shop")
+        self.saw = Tool.objects.create(name="Saw", area=self.woodshop)
+        self.lathe = Tool.objects.create(name="Lathe", area=self.metal)
+        self.admins = Group.objects.create(name="Tool Status Admins")
+        self.admins.permissions.set(
+            Permission.objects.filter(content_type__app_label="tools")
+        )
+
+    def test_sso_login_gives_staff_for_a_group_with_permissions(self):
+        user = User.objects.create_user("test")
+        sync_user(user, {"Tool Status Admins"})
+        user.refresh_from_db()
+        self.assertTrue(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    def test_group_without_permissions_gives_no_staff(self):
+        user = User.objects.create_user("test")
+        sync_user(user, {"Members"})
+        user.refresh_from_db()
+        self.assertFalse(user.is_staff)
+
+    def test_group_permissions_cover_every_area(self):
+        user = User.objects.create_user("test", is_staff=True)
+        self.admins.user_set.add(user)
+        self.client.force_login(user)
+        response = self.client.get(reverse("admin:tools_tool_changelist"))
+        self.assertContains(response, "Saw")
+        self.assertContains(response, "Lathe")
+        for tool in (self.saw, self.lathe):
+            url = reverse("admin:tools_tool_change", args=[tool.pk])
+            self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.get(reverse("admin:tools_area_changelist")).status_code, 200)
+
+    def test_view_only_permission_cannot_edit(self):
+        viewers = Group.objects.create(name="Viewers")
+        viewers.permissions.add(Permission.objects.get(codename="view_tool"))
+        user = User.objects.create_user("viewer", is_staff=True)
+        viewers.user_set.add(user)
+        self.client.force_login(user)
+        url = reverse("admin:tools_tool_change", args=[self.lathe.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="_save"')
