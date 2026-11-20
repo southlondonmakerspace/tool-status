@@ -157,7 +157,7 @@ docker compose exec web python manage.py createsuperuser
 
 ### Without Docker
 
-You need Python 3.12 or newer.
+You need Python 3.12 or newer, and Node.js to build the CSS (see below).
 
 ```bash
 python3 -m venv .venv
@@ -187,22 +187,26 @@ Run the tests with:
 DEBUG=1 .venv/bin/python manage.py test
 ```
 
-### Changing the CSS
+### The CSS
 
 The pages use Bootstrap classes only, with no custom CSS and no JavaScript.
 Bootstrap is compiled from [`static/scss/bootstrap.scss`](static/scss/bootstrap.scss)
 with `$color-mode-type: media-query`, so dark mode follows the device through
-`@media (prefers-color-scheme: dark)`. The compiled
-`static/vendor/bootstrap/bootstrap.min.css` is committed, so you only need
-Node.js if you change the Sass or update Bootstrap:
+`@media (prefers-color-scheme: dark)`. The compiled CSS isn't committed:
 
-```bash
-npm install
-```
+- **Docker** builds it: the image's first stage compiles it with Node, and
+  only the CSS is copied into the final image.
+- **The dev stack** runs a `css` service that rebuilds it whenever the Sass
+  changes.
+- **Without Docker**, build it once with Node.js before running the app:
 
-```bash
-npm run build:css
-```
+  ```bash
+  npm install
+  ```
+
+  ```bash
+  npm run build:css
+  ```
 
 ## Project layout
 

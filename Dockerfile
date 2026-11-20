@@ -1,3 +1,14 @@
+# Stage 1: compile Bootstrap from static/scss. Node only lives in this stage.
+FROM node:24.14.1-alpine AS css
+
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY static/scss static/scss
+RUN mkdir -p static/vendor/bootstrap && npm run build:css
+
+
+# Stage 2: the app.
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,6 +23,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
+COPY --from=css /build/static/vendor/bootstrap/bootstrap.min.css static/vendor/bootstrap/bootstrap.min.css
 
 # Collect static files at build time; a throwaway key is enough for this step.
 RUN DJANGO_SECRET_KEY=build-only python manage.py collectstatic --noinput

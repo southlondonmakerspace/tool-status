@@ -1,2 +1,2 @@
-Bootstrap 5.3.9 (MIT licence), compiled from static/scss/bootstrap.scss
-with $color-mode-type: media-query. Rebuild with `npm run build:css`.
+Bootstrap 5.3.9 (MIT licence). bootstrap.min.css is compiled from
+static/scss/bootstrap.scss by the Docker build or `npm run build:css`.

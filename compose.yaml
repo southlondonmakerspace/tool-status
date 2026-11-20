@@ -1,10 +1,20 @@
 # Development stack: `docker compose up`
 #
 # Runs Django's dev server on http://localhost:8000 with your working copy
-# mounted, so code and template changes reload without a rebuild.
+# mounted, so code and template changes reload without a rebuild, and
+# rebuilds the Bootstrap CSS whenever static/scss changes.
 # Production adds Caddy and gunicorn; see compose.prod.yaml.
 
 services:
+  css:
+    image: node:24.14.1-alpine
+    working_dir: /app
+    command: sh -c "npm ci --ignore-scripts --no-audit --no-fund && npm run watch:css"
+    volumes:
+      - .:/app
+      # Keep the container's node_modules separate from any on the host.
+      - css-node-modules:/app/node_modules
+
   web:
     build: .
     env_file:
@@ -14,6 +24,8 @@ services:
       DEBUG: "true"
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
     command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    depends_on:
+      - css
     ports:
       - "8000:8000"
     volumes:
@@ -21,4 +33,5 @@ services:
       - woodcode-data:/app/data
 
 volumes:
+  css-node-modules:
   woodcode-data:

@@ -15,5 +15,6 @@ staticfiles/
 # OS
 .DS_Store
 
-# CSS build
+# CSS build (compiled by Docker or `npm run build:css`)
 node_modules/
+static/vendor/bootstrap/bootstrap.min.css
