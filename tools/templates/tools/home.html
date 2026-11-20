@@ -21,7 +21,7 @@
             <div class="card-body d-flex flex-column">
               <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                 <h3 class="h5 card-title mb-0">
-                  <a class="stretched-link text-body text-decoration-none" href="{% url 'tool page' name=tool.name %}">{{ tool.name }}</a>
+                  <a class="stretched-link text-body text-decoration-none" href="{{ tool.get_absolute_url }}">{{ tool.name }}</a>
                 </h3>
                 {% include "status_badge.html" %}
               </div>

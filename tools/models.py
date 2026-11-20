@@ -4,8 +4,29 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 DAYS_PER_MONTH = 30
+
+# URL segment for tools that aren't in an area: /other/<tool-slug>
+NO_AREA_SLUG = "other"
+
+# First path segments an area must never take over.
+RESERVED_AREA_SLUGS = {"admin", "static", NO_AREA_SLUG}
+
+
+def unique_slug(name, queryset, fallback, reserved=()):
+    """Slug made from name that isn't already used in queryset, such as
+    "band-saw", or "band-saw-2" if that's taken."""
+    base = slugify(name)[:45] or fallback
+    if base in reserved:
+        base = f"{base}-{fallback}"
+    taken = set(queryset.filter(slug__startswith=base).values_list("slug", flat=True))
+    slug, n = base, 2
+    while slug in taken:
+        slug = f"{base}-{n}"
+        n += 1
+    return slug
 
 
 class AreaQuerySet(models.QuerySet):
@@ -25,7 +46,9 @@ class Area(models.Model):
     """A part of the space, such as the woodshop, that tools belong to."""
 
     name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
+    slug = models.SlugField(
+        max_length=50, unique=True, editable=False, help_text="Used in URLs; made from the name."
+    )
     description = models.CharField(max_length=200, blank=True)
     editors = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -48,9 +71,21 @@ class Area(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        # Made from the name on every save; saving without renaming keeps it.
+        self.slug = unique_slug(
+            self.name, Area.objects.exclude(pk=self.pk), "area", RESERVED_AREA_SLUGS
+        )
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = {*kwargs["update_fields"], "slug"}
+        super().save(*args, **kwargs)
+
 
 class Tool(models.Model):
     name = models.CharField(max_length=50, primary_key=True)
+    slug = models.SlugField(
+        max_length=50, editable=False, help_text="Used in the tool's URL; made from the name. Unique within its area."
+    )
     area = models.ForeignKey(
         Area, on_delete=models.PROTECT, null=True, blank=True, related_name="tools"
     )
@@ -64,9 +99,34 @@ class Tool(models.Model):
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["area", "slug"], name="unique_tool_slug_per_area"),
+        ]
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Made from the name on every save, unique within the tool's area.
+        # Saving without renaming or moving the tool keeps the same slug.
+        siblings = Tool.objects.exclude(pk=self.pk).filter(area_id=self.area_id)
+        self.slug = unique_slug(self.name, siblings, "tool")
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = {*kwargs["update_fields"], "slug"}
+        super().save(*args, **kwargs)
+
+    @property
+    def area_slug(self):
+        return self.area.slug if self.area_id else NO_AREA_SLUG
+
+    @property
+    def url_kwargs(self):
+        return {"area_slug": self.area_slug, "tool_slug": self.slug}
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+
+        return reverse("tool page", kwargs=self.url_kwargs)
 
     def can_be_edited_by(self, user):
         """Superusers can edit any tool; other users only tools in their areas."""

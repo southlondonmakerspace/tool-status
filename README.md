@@ -28,6 +28,11 @@ page, with no account needed.
 Every tool belongs to an **area**. The home page shows one section per area,
 and tools with no area are listed last under "Other tools".
 
+Each tool's page is at `/<area>/<tool>`, such as `/woodshop/band-saw`. Both
+parts are made from the names automatically, and change if an area or tool is
+renamed. Tools with no area are at `/other/<tool>`. Old links that used the
+tool's name, such as `/Band%20saw`, redirect to the new address.
+
 Anyone can report a problem, mark a tool as working or log maintenance without
 logging in. Editing tools in the admin (adding, renaming, changing intervals,
 deleting) is limited by area:

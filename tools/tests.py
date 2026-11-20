@@ -47,46 +47,46 @@ class ToolViewTests(TestCase):
     def test_home_lists_tools_without_a_schedule(self):
         response = self.client.get(reverse("home page"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'href="/Band%20saw"')
+        self.assertContains(response, 'href="/other/band-saw"')
 
     def test_tool_page(self):
-        response = self.client.get(reverse("tool page", kwargs={"name": "Band saw"}))
+        response = self.client.get(self.tool.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
     def test_unknown_tool_is_404(self):
-        response = self.client.get(reverse("tool page", kwargs={"name": "Nope"}))
+        response = self.client.get(reverse("tool page", kwargs={"area_slug": "other", "tool_slug": "nope"}))
         self.assertEqual(response.status_code, 404)
 
     def test_mark_down_requires_an_issue(self):
-        url = reverse("update_tool_status", kwargs={"name": "Band saw", "status": "down"})
+        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "down"})
         response = self.client.post(url, {"latest_issue": "  "})
         self.assertEqual(response.status_code, 400)
         self.tool.refresh_from_db()
         self.assertTrue(self.tool.functional)
 
     def test_mark_down_and_up(self):
-        down = reverse("update_tool_status", kwargs={"name": "Band saw", "status": "down"})
-        self.assertRedirects(self.client.post(down, {"latest_issue": "Blade snapped"}), "/Band%20saw")
+        down = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "down"})
+        self.assertRedirects(self.client.post(down, {"latest_issue": "Blade snapped"}), "/other/band-saw")
         self.tool.refresh_from_db()
         self.assertFalse(self.tool.functional)
         self.assertEqual(self.tool.latest_issue, "Blade snapped")
 
-        up = reverse("update_tool_status", kwargs={"name": "Band saw", "status": "up"})
+        up = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "up"})
         self.client.post(up)
         self.tool.refresh_from_db()
         self.assertTrue(self.tool.functional)
 
     def test_unknown_status_is_400(self):
-        url = reverse("update_tool_status", kwargs={"name": "Band saw", "status": "sideways"})
+        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "sideways"})
         self.assertEqual(self.client.post(url).status_code, 400)
 
     def test_status_update_rejects_get(self):
-        url = reverse("update_tool_status", kwargs={"name": "Band saw", "status": "up"})
+        url = reverse("update_tool_status", kwargs={**self.tool.url_kwargs, "status": "up"})
         self.assertEqual(self.client.get(url).status_code, 405)
 
     @mock.patch("tools.views.timezone.localdate", return_value=TODAY)
     def test_log_maintenance(self, _):
-        self.client.post(reverse("maintain_tool", kwargs={"name": "Band saw"}))
+        self.client.post(reverse("maintain_tool", kwargs=self.tool.url_kwargs))
         self.tool.refresh_from_db()
         self.assertEqual(self.tool.last_maintained, TODAY)
 
@@ -191,8 +191,66 @@ class AreaPermissionTests(TestCase):
         self.assertContains(response, "Other tools")
 
     def test_edit_link_only_for_area_editors(self):
-        url = reverse("tool page", kwargs={"name": "Saw"})
+        url = self.saw.get_absolute_url()
         self.client.force_login(self.editor)
         self.assertContains(self.client.get(url), "Edit in admin")
         self.client.force_login(self.group_member)
         self.assertNotContains(self.client.get(url), "Edit in admin")
+
+
+class SlugTests(TestCase):
+    def setUp(self):
+        from .models import Area
+
+        self.woodshop = Area.objects.create(name="Woodshop")
+        self.metal = Area.objects.create(name="Metal Shop")
+
+    def test_area_slug_is_made_from_name(self):
+        self.assertEqual(self.woodshop.slug, "woodshop")
+        self.assertEqual(self.metal.slug, "metal-shop")
+
+    def test_reserved_area_slugs_are_avoided(self):
+        from .models import Area
+
+        self.assertEqual(Area.objects.create(name="Admin").slug, "admin-area")
+        self.assertEqual(Area.objects.create(name="Other").slug, "other-area")
+
+    def test_tool_slug_and_url(self):
+        tool = Tool.objects.create(name="Band Saw (14\")", functional=True, area=self.woodshop)
+        self.assertEqual(tool.slug, "band-saw-14")
+        self.assertEqual(tool.get_absolute_url(), "/woodshop/band-saw-14")
+
+    def test_tool_slugs_unique_within_area_only(self):
+        a = Tool.objects.create(name="Grinder", functional=True, area=self.metal)
+        b = Tool.objects.create(name="grinder", functional=True, area=self.metal)
+        c = Tool.objects.create(name="Grinder!", functional=True, area=self.woodshop)
+        self.assertEqual((a.slug, b.slug, c.slug), ("grinder", "grinder-2", "grinder"))
+
+    def test_saving_keeps_slug(self):
+        tool = Tool.objects.create(name="Lathe", functional=True, area=self.metal)
+        tool.functional = False
+        tool.save(update_fields=["functional"])
+        tool.refresh_from_db()
+        self.assertEqual(tool.slug, "lathe")
+
+    def test_moving_area_updates_url(self):
+        tool = Tool.objects.create(name="Lathe", functional=True, area=self.metal)
+        tool.area = self.woodshop
+        tool.save()
+        self.assertEqual(tool.get_absolute_url(), "/woodshop/lathe")
+
+    def test_renaming_area_updates_slug(self):
+        self.metal.name = "Metalwork"
+        self.metal.save()
+        self.assertEqual(self.metal.slug, "metalwork")
+
+    @override_settings(STORAGES=PLAIN_STATIC)
+    def test_wrong_area_is_404(self):
+        Tool.objects.create(name="Lathe", functional=True, area=self.metal)
+        self.assertEqual(self.client.get("/woodshop/lathe").status_code, 404)
+        self.assertEqual(self.client.get("/metal-shop/lathe").status_code, 200)
+
+    def test_old_name_urls_redirect(self):
+        Tool.objects.create(name="Band saw", functional=True, area=self.woodshop)
+        response = self.client.get("/Band%20saw")
+        self.assertRedirects(response, "/woodshop/band-saw", status_code=301, fetch_redirect_response=False)

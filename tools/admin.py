@@ -8,7 +8,7 @@ class AreaAdmin(admin.ModelAdmin):
     """Only superusers (or users given the Area model permissions) manage areas."""
 
     list_display = ["name", "slug", "tool_count"]
-    prepopulated_fields = {"slug": ["name"]}
+    readonly_fields = ["slug"]
     filter_horizontal = ["editors", "editor_groups"]
 
     @admin.display(description="Tools")
@@ -21,7 +21,8 @@ class ToolAdmin(admin.ModelAdmin):
     """Superusers can edit every tool. Other staff can only see, add, edit and
     delete tools in the areas they're an editor of, directly or via a group."""
 
-    list_display = ["name", "area", "functional", "last_maintained", "maintenance_interval"]
+    list_display = ["name", "area", "slug", "functional", "last_maintained", "maintenance_interval"]
+    readonly_fields = ["slug"]
     list_filter = ["area", "functional"]
     search_fields = ["name", "description"]
 
