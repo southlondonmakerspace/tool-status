@@ -472,3 +472,20 @@ class GroupPermissionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'name="_save"')
+
+
+@override_settings(STORAGES=PLAIN_STATIC, OIDC_ENABLED=True, SOCIALACCOUNT_PROVIDERS=SSO_PROVIDERS)
+class SsoLinkTests(TestCase):
+    @mock.patch(
+        "allauth.socialaccount.providers.openid_connect.views.OpenIDConnectOAuth2Adapter.openid_config",
+        new_callable=mock.PropertyMock,
+        return_value={
+            "authorization_endpoint": "https://sso.example/authorize/",
+            "token_endpoint": "https://sso.example/token/",
+            "userinfo_endpoint": "https://sso.example/userinfo/",
+        },
+    )
+    def test_login_link_goes_straight_to_the_provider(self, _):
+        response = self.client.get("/accounts/oidc/sso/login/?next=/")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("https://sso.example/authorize/"))

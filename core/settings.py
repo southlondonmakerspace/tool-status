@@ -84,6 +84,8 @@ SOCIALACCOUNT_PROVIDERS = {
 # available for a break-glass superuser.
 SOCIALACCOUNT_ONLY = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
+# /accounts/oidc/sso/login/ goes straight to the provider, so it can be linked to.
+SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*"]
 SOCIALACCOUNT_STORE_TOKENS = False
