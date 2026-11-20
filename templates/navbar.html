@@ -1,1 +1,12 @@
-<a href="{% url 'home page' %}">Home</a> 
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="{% url 'home page' %}">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      Woodshop
+    </a>
+    <nav>
+      <a href="{% url 'home page' %}">All tools</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+    </nav>
+  </div>
+</header>

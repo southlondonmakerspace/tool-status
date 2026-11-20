@@ -1,40 +1,60 @@
 {% extends "main.html" %}
 
+{% block title %}{{ tool.name }} · Woodshop tools{% endblock %}
+
 {% block content %}
-  <div class = tool-container >
-    The {{ tool.name }} is {% if tool.functional == True %} working <br> The last issue was {{ tool.latest_issue }} {% else %} not working. <br> reported issue {{ tool.latest_issue}} 
-    {% endif  %}
+  <a class="back-link" href="{% url 'home page' %}">&larr; All tools</a>
+
+  <div class="tool-header">
+    <h1>{{ tool.name }}</h1>
+    {% include "status_badge.html" %}
   </div>
-  
-    {% if tool.days_remaining is None %}
-      <div class = tool-container>
-      No maintenance schedule set
-    {% elif not tool.maintenance_overdue %}
-      <div class = tool-container>
-      Maintainance will be needed in {{ tool.days_remaining }} days
-    {% elif tool.maintenance_overdue %}
-      <div class = "tool-container tool-needs-maintainance">
-      This tool needs to be maintained
-    {% endif %}
-    <form method="post" action ="{% url 'maintain_tool' name=tool.name %}">
-      {% csrf_token %}
-      <button type="submit"> I maintained {{ tool.name }} </button>
-    </form>
+  {% if tool.description %}<p class="lead">{{ tool.description }}</p>{% endif %}
 
+  <div class="panels">
+    <section class="panel">
+      <h2>Condition</h2>
+      {% if tool.functional %}
+        <p>This tool is working.</p>
+        {% if tool.latest_issue %}
+          <p class="muted small">Last reported issue: {{ tool.latest_issue }}</p>
+        {% endif %}
+        <form method="post" action="{% url 'update_tool_status' name=tool.name status='down' %}" class="stack">
+          {% csrf_token %}
+          <label for="latest_issue">Something wrong? Describe the problem</label>
+          <textarea id="latest_issue" name="latest_issue" rows="4" required placeholder="For example: blade guard is loose"></textarea>
+          <button type="submit" class="button button-danger">Report {{ tool.name }} as not working</button>
+        </form>
+      {% else %}
+        <div class="callout callout-down">
+          <strong>Not working</strong>
+          <p>{{ tool.latest_issue|default:"No details given."|linebreaksbr }}</p>
+        </div>
+        <form method="post" action="{% url 'update_tool_status' name=tool.name status='up' %}">
+          {% csrf_token %}
+          <button type="submit" class="button button-success">Mark {{ tool.name }} as working</button>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Maintenance</h2>
+      <dl class="facts">
+        <div><dt>Last maintained</dt><dd>{{ tool.last_maintained|date:"j M Y"|default:"Never recorded" }}</dd></div>
+        <div><dt>Interval</dt><dd>{% if tool.maintenance_interval %}Every {{ tool.maintenance_interval }} month{{ tool.maintenance_interval|pluralize }}{% else %}Not set{% endif %}</dd></div>
+        <div><dt>Next due</dt><dd>{{ tool.next_due|date:"j M Y"|default:"—" }}</dd></div>
+      </dl>
+      {% if tool.days_remaining is not None %}
+        {% if tool.maintenance_overdue %}
+          <div class="callout callout-overdue"><strong>Maintenance is overdue.</strong></div>
+        {% else %}
+          <p class="muted">Due in {{ tool.days_remaining }} day{{ tool.days_remaining|pluralize }}.</p>
+        {% endif %}
+      {% endif %}
+      <form method="post" action="{% url 'maintain_tool' name=tool.name %}">
+        {% csrf_token %}
+        <button type="submit" class="button">I maintained {{ tool.name }} today</button>
+      </form>
+    </section>
   </div>
-
-
-  {% if tool.functional == True %}  
-    <form method="post" action="{% url 'update_tool_status' name=tool.name status='down' %}">
-    {% csrf_token %}
-    <textarea name="latest_issue" rows="4" cols="50" required placeholder="Write a brief description of the issue"></textarea>
-    <button type="submit">Mark {{ tool.name }} down</button>
-</form>
-  {% elif tool.functional == False %}
-<form method="post" action="{% url 'update_tool_status' name=tool.name status='up' %}">
-  {% csrf_token %}
-  <button type="submit">Mark {{tool.name }} up</button>
-</form>
-  {% endif %}
-
 {% endblock content %}

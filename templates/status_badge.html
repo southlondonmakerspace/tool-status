@@ -1,0 +1,7 @@
+{% if tool.status == "down" %}
+  <span class="badge badge-down">Not working</span>
+{% elif tool.status == "overdue" %}
+  <span class="badge badge-overdue">Maintenance due</span>
+{% else %}
+  <span class="badge badge-ok">Working</span>
+{% endif %}

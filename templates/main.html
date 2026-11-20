@@ -2,18 +2,22 @@
 {% load static %}
 <html lang="en">
   <head>
-    <link rel="stylesheet" href="{% static 'style.css' %}" type="text/css"> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title></title>
+    <title>{% block title %}Woodshop tools{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
   </head>
   <body>
-    <div>
-      {% include "navbar.html" %}
-    </div>
-    <div>
-    {% block content %}
-    {% endblock %}
-    </div>
+    {% include "navbar.html" %}
+    <main class="page">
+      {% if messages %}
+        <ul class="messages" role="status">
+          {% for message in messages %}
+            <li class="message message-{{ message.tags }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
   </body>
 </html>

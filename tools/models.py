@@ -41,6 +41,10 @@ class Tool(models.Model):
         return self.days_remaining is not None and self.days_remaining < 0
 
     @property
+    def days_overdue(self):
+        return -self.days_remaining if self.maintenance_overdue else 0
+
+    @property
     def status(self):
         """One of "down", "overdue" or "ok"."""
         if not self.functional:

@@ -1,0 +1,11 @@
+{% extends "main.html" %}
+
+{% block title %}Not found · Woodshop tools{% endblock %}
+
+{% block content %}
+  <section class="empty">
+    <h1>We couldn't find that tool</h1>
+    <p>It may have been renamed or removed.</p>
+    <a class="button" href="{% url 'home page' %}">Back to all tools</a>
+  </section>
+{% endblock %}

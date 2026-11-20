@@ -1,33 +1,40 @@
 {% extends "main.html" %}
 
 {% block content %}
-<div class = "tool-parent-container">
-  {% for tool in tools %}
-    <div class=tool-container>
-      <div class=inner-tool-container >
-      The <a href="{% url 'tool page' name=tool.name %}">{{ tool.name }}</a> is 
-        {% if tool.functional == True  %}
-          working
-        {% else %}
-          not working
-        {% endif %}
-        <br>
-        The tool needs to be maintained on {{ tool.next_due|date:"Y-m-d"|default:"(not scheduled)" }}
-        <br>
-      </div>
-    {% if tool.functional == False%}
-      <div class = "tool-container tool-bad">
-        The tool is not working      
-    {% elif tool.maintenance_overdue %}
-      <div class = "tool-container tool-needs-maintainance">
-      This tool needs to be maintained
-    {% else %}
-      <div class = "tool-container tool-good"> The tool is working 
-    {% endif %}
-
-      </div>
-
-    </div>
-    {% endfor %}
+  <div class="page-heading">
+    <h1>Tools</h1>
+    <p class="muted">Check a tool before you use it, and report anything that isn't right.</p>
   </div>
+
+  {% if tools %}
+    <ul class="tool-grid">
+      {% for tool in tools %}
+        <li class="tool-card status-{{ tool.status }}">
+          <a class="tool-card-link" href="{% url 'tool page' name=tool.name %}">
+            <div class="tool-card-top">
+              <h2>{{ tool.name }}</h2>
+              {% include "status_badge.html" %}
+            </div>
+            {% if tool.description %}<p class="muted">{{ tool.description }}</p>{% endif %}
+            <p class="tool-card-meta">
+              {% if tool.status == "down" %}
+                {{ tool.latest_issue|default:"Reported as not working"|truncatechars:90 }}
+              {% elif tool.days_remaining is None %}
+                No maintenance schedule
+              {% elif tool.maintenance_overdue %}
+                Maintenance overdue by {{ tool.days_overdue }} day{{ tool.days_overdue|pluralize }}
+              {% else %}
+                Maintenance due {{ tool.next_due|date:"j M Y" }}
+              {% endif %}
+            </p>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <section class="empty">
+      <h2>No tools yet</h2>
+      <p class="muted">Add tools in the admin to start tracking them.</p>
+    </section>
+  {% endif %}
 {% endblock content %}
