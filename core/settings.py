@@ -68,7 +68,7 @@ SOCIALACCOUNT_PROVIDERS = {
                 "client_id": os.environ.get("OIDC_CLIENT_ID", ""),
                 "secret": os.environ.get("OIDC_CLIENT_SECRET", ""),
                 "settings": {
-                    "server_url": os.environ.get("OIDC_SERVER_URL", ""),
+                    "server_url": os.environ.get("OIDC_SERVER_URL", "").rstrip("/"),
                     # The provider is the source of truth for email, so trust
                     # it and sign in to any existing account that has it.
                     "verified_email": True,
