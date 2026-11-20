@@ -1,13 +1,13 @@
 services:
-  django-web:
-   build: .
-   container_name: django-docker
-   ports:
-     - "8800:8000"
-   environment:
-     DJANGO_SECRET_KEY: j@91r9d@2+926&=@!2r26n1jianz_lt3!s#*eg55zazxv0scc7
-     DEBUG: True
-     DJANGO_ALLOWED_HOSTS: "woodshop.porridge.cc,127.0.0.1"
-     CSRF_TRUSTED_ORIGINS: http://woodshop.porridge.cc
-   volumes:
-     - ./db.sqlite3:/app/db.sqlite3
+  web:
+    build: .
+    container_name: woodcode
+    restart: unless-stopped
+    ports:
+      - "8800:8000"
+    env_file: .env
+    volumes:
+      - woodcode-data:/app/data
+
+volumes:
+  woodcode-data:
