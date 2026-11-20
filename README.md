@@ -68,6 +68,13 @@ Each time someone signs in with SSO:
 - They get **staff status** (admin access) while they're a superuser or an
   editor of at least one area.
 
+Their email and username come from the provider, with no sign-up form. If
+an account here already has the same email, such as one made with
+`createsuperuser`, they're signed in to that account and it's linked to SSO
+from then on. Linking removes that account's password, so keep any
+break-glass admin account on an email address nobody uses in the provider.
+If the username is taken by another account, a number is added to it.
+
 Changes in the provider take effect the next time the person signs in.
 Users who sign in with a password are never changed.
 
@@ -79,6 +86,8 @@ Users who sign in with a password are never changed.
    profile scope includes a `groups` claim.
 2. Create an **Application** that uses the provider, and bind the groups or
    users who should be able to sign in.
+   Because sign-in trusts the provider's email address, don't let users
+   change their own email in Authentik's user settings flow.
 3. Add the client ID, client secret and the provider's **OpenID Configuration
    Issuer** URL to `.env` as `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and
    `OIDC_SERVER_URL`, then restart the app.

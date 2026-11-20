@@ -67,7 +67,13 @@ SOCIALACCOUNT_PROVIDERS = {
                 "name": OIDC_PROVIDER_NAME,
                 "client_id": os.environ.get("OIDC_CLIENT_ID", ""),
                 "secret": os.environ.get("OIDC_CLIENT_SECRET", ""),
-                "settings": {"server_url": os.environ.get("OIDC_SERVER_URL", "")},
+                "settings": {
+                    "server_url": os.environ.get("OIDC_SERVER_URL", ""),
+                    # The provider is the source of truth for email, so trust
+                    # it and sign in to any existing account that has it.
+                    "verified_email": True,
+                    "email_authentication": True,
+                },
             }
         ]
         if OIDC_ENABLED
@@ -78,6 +84,8 @@ SOCIALACCOUNT_PROVIDERS = {
 # available for a break-glass superuser.
 SOCIALACCOUNT_ONLY = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*"]
 SOCIALACCOUNT_STORE_TOKENS = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_LOGOUT_ON_GET = False

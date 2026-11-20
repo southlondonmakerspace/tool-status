@@ -2,13 +2,18 @@ from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest import mock
 
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import AnonymousUser, Group, User
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import connection
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from allauth.account.signals import user_logged_in
+from allauth.core import context
+from allauth.socialaccount.adapter import get_adapter
+from allauth.socialaccount.helpers import complete_social_login
 
 from .models import Area, Status, Tool
 from .sso import group_names_from
@@ -303,7 +308,11 @@ SSO_PROVIDERS = {
                 "name": "Authentik",
                 "client_id": "test",
                 "secret": "test",
-                "settings": {"server_url": "https://sso.example/"},
+                "settings": {
+                    "server_url": "https://sso.example/",
+                    "verified_email": True,
+                    "email_authentication": True,
+                },
             }
         ]
     }
@@ -376,3 +385,39 @@ class SsoTemplateTests(TestCase):
     def test_sign_out_when_signed_in(self):
         self.client.force_login(User.objects.create_user("sam"))
         self.assertContains(self.client.get(reverse("home")), "Sign out")
+
+
+@override_settings(SOCIALACCOUNT_PROVIDERS=SSO_PROVIDERS, OIDC_SUPERUSER_GROUP="Systems")
+class SsoSignupTests(TestCase):
+    """SSO sign-in takes email and username from the provider, with no sign-up form."""
+
+    def sso_login(self, **claims):
+        request = RequestFactory().get("/accounts/oidc/sso/login/callback/")
+        SessionMiddleware(lambda r: None).process_request(request)
+        request._messages = FallbackStorage(request)
+        request.user = AnonymousUser()
+        with context.request_context(request):
+            provider = get_adapter().get_provider(request, "sso")
+            sociallogin = provider.sociallogin_from_response(
+                request, {"userinfo": claims, "id_token": claims}
+            )
+            response = complete_social_login(request, sociallogin)
+        self.assertEqual(response["Location"], "/")  # not the sign-up form
+
+    def test_new_user_gets_email_and_username_from_provider(self):
+        self.sso_login(sub="1", email="sam@example.org", preferred_username="sam")
+        user = User.objects.get()
+        self.assertEqual((user.username, user.email), ("sam", "sam@example.org"))
+
+    def test_signs_in_to_existing_account_with_same_email(self):
+        User.objects.create_user("tom", "tom@example.org", "x")
+        self.sso_login(sub="2", email="tom@example.org", preferred_username="tom", groups=["Systems"])
+        user = User.objects.get()
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.socialaccount_set.exists())
+
+    def test_taken_username_gets_a_suffix(self):
+        User.objects.create_user("sam", "other@example.org", "x")
+        self.sso_login(sub="3", email="sam@example.org", preferred_username="sam")
+        self.assertEqual(User.objects.count(), 2)
+        self.assertNotEqual(User.objects.get(email="sam@example.org").username, "sam")
