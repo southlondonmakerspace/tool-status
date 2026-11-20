@@ -187,13 +187,31 @@ Run the tests with:
 DEBUG=1 .venv/bin/python manage.py test
 ```
 
+### Changing the CSS
+
+The pages use Bootstrap classes only, with no custom CSS and no JavaScript.
+Bootstrap is compiled from [`static/scss/bootstrap.scss`](static/scss/bootstrap.scss)
+with `$color-mode-type: media-query`, so dark mode follows the device through
+`@media (prefers-color-scheme: dark)`. The compiled
+`static/vendor/bootstrap/bootstrap.min.css` is committed, so you only need
+Node.js if you change the Sass or update Bootstrap:
+
+```bash
+npm install
+```
+
+```bash
+npm run build:css
+```
+
 ## Project layout
 
 ```
 core/              Django project settings and URL config
 tools/             The tools app: model, views, URLs, templates and tests
 templates/         Shared base layout, header, status badge and 404 page
-static/            Bootstrap 5.3.9 CSS (vendored)
+static/            Bootstrap Sass entry point and the compiled CSS
+package.json       Pins Bootstrap and Sass for building the CSS
 Dockerfile         Image (gunicorn, non-root)
 compose.yaml       Development stack (dev server on :8000, no Caddy)
 compose.prod.yaml  Production stack (gunicorn + Caddy HTTPS)

@@ -1,1 +1,2 @@
-Bootstrap 5.3.9, from https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.9.tgz (dist/css). MIT licence.
+Bootstrap 5.3.9 (MIT licence), compiled from static/scss/bootstrap.scss
+with $color-mode-type: media-query. Rebuild with `npm run build:css`.

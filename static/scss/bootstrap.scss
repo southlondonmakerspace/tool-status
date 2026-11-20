@@ -1,0 +1,6 @@
+// Bootstrap with dark mode driven by the device's setting through
+// @media (prefers-color-scheme: dark), so no JavaScript or data-bs-theme
+// attribute is needed. Rebuild with `npm run build:css`.
+$color-mode-type: media-query;
+
+@import "bootstrap/scss/bootstrap";

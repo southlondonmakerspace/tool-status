@@ -14,3 +14,6 @@ staticfiles/
 
 # OS
 .DS_Store
+
+# CSS build
+node_modules/
