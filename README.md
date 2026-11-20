@@ -110,6 +110,7 @@ All settings come from `.env`:
 | `CSRF_TRUSTED_ORIGINS` | Yes | Comma-separated origins, including the scheme, e.g. `https://woodshop.example.org`. |
 | `DEBUG` | No | `true` to turn on debug pages. Never use it in production. Defaults to `false`. |
 | `SECURE_COOKIES` | No | Defaults to `true`. Set to `false` only if the site is served over plain HTTP. |
+| `TIME_ZONE` | No | The space's time zone, used for the date when maintenance is logged. Defaults to `Europe/London`. |
 | `DJANGO_DB_PATH` | No | Path to the SQLite file. The Docker image sets it to `/app/data/db.sqlite3`. |
 
 ### Backups and moving a database
