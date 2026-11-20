@@ -4,7 +4,7 @@ from unittest import mock
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Tool
+from .models import Status, Tool
 
 TODAY = date(2026, 6, 15)
 
@@ -26,17 +26,17 @@ class ToolModelTests(TestCase):
         self.assertIsNone(tool.next_due)
         self.assertIsNone(tool.days_remaining)
         self.assertFalse(tool.maintenance_overdue)
-        self.assertEqual(tool.status, "ok")
+        self.assertEqual(tool.status, Status.OK)
 
     def test_overdue(self, _):
         tool = Tool(name="Saw", functional=True, last_maintained=TODAY - timedelta(days=40), maintenance_interval=1)
         self.assertEqual(tool.days_remaining, -10)
         self.assertEqual(tool.days_overdue, 10)
-        self.assertEqual(tool.status, "overdue")
+        self.assertEqual(tool.status, Status.OVERDUE)
 
     def test_down_beats_overdue(self, _):
         tool = Tool(name="Saw", functional=False, last_maintained=TODAY - timedelta(days=400), maintenance_interval=1)
-        self.assertEqual(tool.status, "down")
+        self.assertEqual(tool.status, Status.DOWN)
 
 
 @override_settings(STORAGES=PLAIN_STATIC)

@@ -16,6 +16,20 @@ NO_AREA_SLUG = "other"
 RESERVED_AREA_SLUGS = {"admin", "static", NO_AREA_SLUG}
 
 
+class Status(models.TextChoices):
+    DOWN = "down", "Not working"
+    OVERDUE = "overdue", "Maintenance due"
+    OK = "ok", "Working"
+
+
+# Bootstrap colour used for each status's badge and card edge.
+STATUS_COLORS = {
+    Status.DOWN: "danger",
+    Status.OVERDUE: "warning",
+    Status.OK: "success",
+}
+
+
 def unique_slug(name, queryset, fallback, reserved=()):
     """Slug made from name that isn't already used in queryset, such as
     "band-saw", or "band-saw-2" if that's taken."""
@@ -162,24 +176,16 @@ class Tool(models.Model):
 
     @property
     def status(self):
-        """One of "down", "overdue" or "ok"."""
         if not self.functional:
-            return "down"
+            return Status.DOWN
         if self.maintenance_overdue:
-            return "overdue"
-        return "ok"
-
-    STATUS_DISPLAY = {
-        # status: (label, Bootstrap colour)
-        "down": ("Not working", "danger"),
-        "overdue": ("Maintenance due", "warning"),
-        "ok": ("Working", "success"),
-    }
+            return Status.OVERDUE
+        return Status.OK
 
     @property
     def status_label(self):
-        return self.STATUS_DISPLAY[self.status][0]
+        return self.status.label
 
     @property
     def status_color(self):
-        return self.STATUS_DISPLAY[self.status][1]
+        return STATUS_COLORS[self.status]
