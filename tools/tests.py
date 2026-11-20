@@ -98,6 +98,9 @@ class ToolViewTests(TestCase):
 
 @override_settings(STORAGES=PLAIN_STATIC)
 class SiteNameTests(TestCase):
+    def test_empty_home_page(self):
+        self.assertContains(self.client.get(reverse("home page")), "No tools yet")
+
     def test_defaults_to_tool_status(self):
         response = self.client.get(reverse("home page"))
         self.assertContains(response, "<title>Tool Status</title>", html=False)

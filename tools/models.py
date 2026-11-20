@@ -164,3 +164,18 @@ class Tool(models.Model):
         if self.maintenance_overdue:
             return "overdue"
         return "ok"
+
+    STATUS_DISPLAY = {
+        # status: (label, Bootstrap colour)
+        "down": ("Not working", "danger"),
+        "overdue": ("Maintenance due", "warning"),
+        "ok": ("Working", "success"),
+    }
+
+    @property
+    def status_label(self):
+        return self.STATUS_DISPLAY[self.status][0]
+
+    @property
+    def status_color(self):
+        return self.STATUS_DISPLAY[self.status][1]

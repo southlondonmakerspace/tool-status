@@ -6,48 +6,46 @@
     <p class="text-body-secondary mb-0">Check a tool before you use it, and report anything that isn't right.</p>
   </div>
 
-  {% if tools %}
-    {% regroup tools by area as areas %}
-    {% for group in areas %}
-    <section class="mb-5" {% if group.grouper %}id="{{ group.grouper.slug }}"{% endif %}>
+  {% regroup tools by area as areas %}
+  {% for group in areas %}
+    <section class="mb-5"{% if group.grouper %} id="{{ group.grouper.slug }}"{% endif %}>
       <div class="d-flex align-items-baseline gap-2 border-bottom pb-2 mb-3">
         <h2 class="h4 mb-0">{{ group.grouper.name|default:"Other tools" }}</h2>
-        {% if group.grouper.description %}<span class="text-body-secondary small">{{ group.grouper.description }}</span>{% endif %}
+        {% if group.grouper.description %}<span class="small text-body-secondary">{{ group.grouper.description }}</span>{% endif %}
       </div>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-      {% for tool in group.list %}
-        <div class="col">
-          <div class="card h-100 shadow-sm border-0 border-start border-4 {% if tool.status == 'down' %}border-danger{% elif tool.status == 'overdue' %}border-warning{% else %}border-success{% endif %}">
-            <div class="card-body d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                <h3 class="h5 card-title mb-0">
-                  <a class="stretched-link text-body text-decoration-none" href="{{ tool.get_absolute_url }}">{{ tool.name }}</a>
-                </h3>
-                {% include "status_badge.html" %}
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+        {% for tool in group.list %}
+          <div class="col">
+            <div class="card h-100 shadow-sm border-0 border-start border-4 border-{{ tool.status_color }}">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                  <h3 class="h5 card-title mb-0">
+                    <a class="stretched-link text-body text-decoration-none" href="{{ tool.get_absolute_url }}">{{ tool.name }}</a>
+                  </h3>
+                  {% include "status_badge.html" %}
+                </div>
+                {% if tool.description %}<p class="card-text text-body-secondary">{{ tool.description }}</p>{% endif %}
+                <p class="card-text small text-body-secondary mt-auto">
+                  {% if tool.status == "down" %}
+                    {{ tool.latest_issue|default:"Reported as not working"|truncatechars:90 }}
+                  {% elif tool.days_remaining is None %}
+                    No maintenance schedule
+                  {% elif tool.maintenance_overdue %}
+                    Maintenance overdue by {{ tool.days_overdue }} day{{ tool.days_overdue|pluralize }}
+                  {% else %}
+                    Maintenance due {{ tool.next_due|date:"j M Y" }}
+                  {% endif %}
+                </p>
               </div>
-              {% if tool.description %}<p class="card-text text-body-secondary">{{ tool.description }}</p>{% endif %}
-              <p class="card-text small text-body-secondary mt-auto">
-                {% if tool.status == "down" %}
-                  {{ tool.latest_issue|default:"Reported as not working"|truncatechars:90 }}
-                {% elif tool.days_remaining is None %}
-                  No maintenance schedule
-                {% elif tool.maintenance_overdue %}
-                  Maintenance overdue by {{ tool.days_overdue }} day{{ tool.days_overdue|pluralize }}
-                {% else %}
-                  Maintenance due {{ tool.next_due|date:"j M Y" }}
-                {% endif %}
-              </p>
             </div>
           </div>
-        </div>
-      {% endfor %}
-    </div>
+        {% endfor %}
+      </div>
     </section>
-    {% endfor %}
-  {% else %}
+  {% empty %}
     <div class="text-center py-5">
       <h2 class="h4">No tools yet</h2>
       <p class="text-body-secondary">Add tools in the admin to start tracking them.</p>
     </div>
-  {% endif %}
+  {% endfor %}
 {% endblock content %}

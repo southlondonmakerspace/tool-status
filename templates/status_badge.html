@@ -1,7 +1,1 @@
-{% if tool.status == "down" %}
-  <span class="badge rounded-pill text-bg-danger">Not working</span>
-{% elif tool.status == "overdue" %}
-  <span class="badge rounded-pill text-bg-warning">Maintenance due</span>
-{% else %}
-  <span class="badge rounded-pill text-bg-success">Working</span>
-{% endif %}
+<span class="badge rounded-pill text-bg-{{ tool.status_color }}">{{ tool.status_label }}</span>
