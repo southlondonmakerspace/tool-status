@@ -12,13 +12,13 @@
           not working
         {% endif %}
         <br>
-        The tool needs to be maintained on {{ tool.needs_maintainance }}
+        The tool needs to be maintained on {{ tool.next_due|date:"Y-m-d"|default:"(not scheduled)" }}
         <br>
       </div>
     {% if tool.functional == False%}
       <div class = "tool-container tool-bad">
         The tool is not working      
-    {% elif tool.remaining_time.days < 0 %}
+    {% elif tool.maintenance_overdue %}
       <div class = "tool-container tool-needs-maintainance">
       This tool needs to be maintained
     {% else %}

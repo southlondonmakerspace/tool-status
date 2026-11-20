@@ -1,55 +1,45 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-
-from django.shortcuts import get_object_or_404, redirect
-
+from django.contrib import messages
+from django.http import HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .models import Tool
-import json
 
-from datetime import timedelta, datetime, date
 
-# Create your views here.
 def home_view(request):
-    tools = Tool.objects.all()
-    for tool in tools:
-        tool.needs_maintainance=  (date.today()+ timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
-        tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintenance_interval * 30)) - date.today())
+    return render(request, "tools/home.html", {"tools": Tool.objects.all()})
 
-    context = {"tools":tools}
-    return render(request, "tools/home.html", context)
 
 def tool_view(request, name):
-    tool = Tool.objects.get(name=name)
-    tool.needs_maintainance =  (tool.last_maintained + timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
-    tool.remaining_time = ((tool.last_maintained + timedelta(tool.maintenance_interval * 30)) - date.today())
-    context = {"tool":tool}
-    return render(request, "tools/tool.html", context)
+    tool = get_object_or_404(Tool, name=name)
+    return render(request, "tools/tool.html", {"tool": tool})
 
-@require_http_methods(["POST"])
+
+@require_POST
 def tool_status_update(request, name, status):
-    tool = Tool.objects.get(name=name)
+    tool = get_object_or_404(Tool, name=name)
     if status == "down":
         issue = request.POST.get("latest_issue", "").strip()
         if not issue:
-            return HttpResponseBadRequest("Please provide latest_issue")
+            return HttpResponseBadRequest("Please describe the issue")
         tool.functional = False
         tool.latest_issue = issue
-        response = HttpResponse("The tool is now down")
-        tool.save(update_fields=["functional","latest_issue"])
+        tool.save(update_fields=["functional", "latest_issue"])
+        messages.warning(request, f"{tool.name} is marked as not working.")
     elif status == "up":
         tool.functional = True
-        response = HttpResponse("The tool is now up")
         tool.save(update_fields=["functional"])
-    return redirect("tool page", name=name)
+        messages.success(request, f"{tool.name} is marked as working.")
+    else:
+        return HttpResponseBadRequest("Status must be 'up' or 'down'")
+    return redirect("tool page", name=tool.name)
 
-@require_http_methods(["POST"])
+
+@require_POST
 def tool_maintained(request, name):
-    tool = Tool.objects.get(name=name)
-    Needs_maintainance = (datetime.now() + timedelta(tool.maintenance_interval*30)).strftime("%Y-%m-%d")
-    tool.last_maintained = datetime.now().strftime("%Y-%m-%d")
+    tool = get_object_or_404(Tool, name=name)
+    tool.last_maintained = timezone.localdate()
     tool.save(update_fields=["last_maintained"])
-    return redirect("tool page", name=name) 
+    messages.success(request, f"Maintenance on {tool.name} is logged.")
+    return redirect("tool page", name=tool.name)

@@ -6,10 +6,13 @@
     {% endif  %}
   </div>
   
-    {% if tool.remaining_time.days >= 0 %}
+    {% if tool.days_remaining is None %}
       <div class = tool-container>
-      Maintainance will be needed in {{tool.remaining_time.days}} days
-    {% elif tool.remaining_time.days < 0 %}
+      No maintenance schedule set
+    {% elif not tool.maintenance_overdue %}
+      <div class = tool-container>
+      Maintainance will be needed in {{ tool.days_remaining }} days
+    {% elif tool.maintenance_overdue %}
       <div class = "tool-container tool-needs-maintainance">
       This tool needs to be maintained
     {% endif %}
