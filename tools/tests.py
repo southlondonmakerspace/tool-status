@@ -1,10 +1,13 @@
 from datetime import date, timedelta
 from unittest import mock
 
+from django.contrib.auth.models import Group, User
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from .models import Status, Tool
+from .models import Area, Status, Tool
 
 TODAY = date(2026, 6, 15)
 
@@ -113,10 +116,6 @@ class SiteNameTests(TestCase):
 @override_settings(STORAGES=PLAIN_STATIC)
 class AreaPermissionTests(TestCase):
     def setUp(self):
-        from django.contrib.auth.models import Group, User
-
-        from .models import Area
-
         self.woodshop = Area.objects.create(name="Woodshop", slug="woodshop")
         self.metal = Area.objects.create(name="Metal shop", slug="metal-shop")
         self.saw = Tool.objects.create(name="Saw", functional=True, area=self.woodshop)
@@ -137,8 +136,6 @@ class AreaPermissionTests(TestCase):
         return reverse("admin:tools_tool_change", args=[tool.pk])
 
     def test_editable_by(self):
-        from .models import Area
-
         self.assertEqual(list(Area.objects.editable_by(self.editor)), [self.woodshop])
         self.assertEqual(list(Area.objects.editable_by(self.group_member)), [self.metal])
         self.assertEqual(list(Area.objects.editable_by(self.nobody)), [])
@@ -202,8 +199,6 @@ class AreaPermissionTests(TestCase):
 
 class SlugTests(TestCase):
     def setUp(self):
-        from .models import Area
-
         self.woodshop = Area.objects.create(name="Woodshop")
         self.metal = Area.objects.create(name="Metal Shop")
 
@@ -212,8 +207,6 @@ class SlugTests(TestCase):
         self.assertEqual(self.metal.slug, "metal-shop")
 
     def test_reserved_area_slugs_are_avoided(self):
-        from .models import Area
-
         self.assertEqual(Area.objects.create(name="Admin").slug, "admin-area")
         self.assertEqual(Area.objects.create(name="Other").slug, "other-area")
 
@@ -272,21 +265,14 @@ class AdminQueryTests(TestCase):
     """Admin list pages should make the same number of queries however many rows they show."""
 
     def setUp(self):
-        from django.contrib.auth.models import User
-
         self.client.force_login(User.objects.create_superuser("admin", password="x"))
 
     def add_rows(self, count):
-        from .models import Area
-
         start = Area.objects.count()
         for i in range(start, start + count):
             Tool.objects.create(name=f"Tool {i}", area=Area.objects.create(name=f"Area {i}"))
 
     def queries_for(self, url):
-        from django.db import connection
-        from django.test.utils import CaptureQueriesContext
-
         with CaptureQueriesContext(connection) as queries:
             self.client.get(url)
         return len(queries)
