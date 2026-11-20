@@ -265,3 +265,41 @@ class RenameTests(TestCase):
         tool.save()
         self.assertEqual(Tool.objects.count(), 1)
         self.assertEqual(Tool.objects.get().slug, "big-band-saw")
+
+
+@override_settings(STORAGES=PLAIN_STATIC)
+class AdminQueryTests(TestCase):
+    """Admin list pages should make the same number of queries however many rows they show."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.client.force_login(User.objects.create_superuser("admin", password="x"))
+
+    def add_rows(self, count):
+        from .models import Area
+
+        start = Area.objects.count()
+        for i in range(start, start + count):
+            Tool.objects.create(name=f"Tool {i}", area=Area.objects.create(name=f"Area {i}"))
+
+    def queries_for(self, url):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as queries:
+            self.client.get(url)
+        return len(queries)
+
+    def assert_flat(self, url):
+        self.add_rows(2)
+        self.client.get(url)  # warm up
+        few = self.queries_for(url)
+        self.add_rows(8)
+        self.assertEqual(self.queries_for(url), few)
+
+    def test_tool_list(self):
+        self.assert_flat(reverse("admin:tools_tool_changelist"))
+
+    def test_area_list(self):
+        self.assert_flat(reverse("admin:tools_area_changelist"))

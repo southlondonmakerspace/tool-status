@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 
 from .models import Area, Tool
 
@@ -11,9 +12,12 @@ class AreaAdmin(admin.ModelAdmin):
     readonly_fields = ["slug"]
     filter_horizontal = ["editors", "editor_groups"]
 
-    @admin.display(description="Tools")
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(tool_count=Count("tools"))
+
+    @admin.display(description="Tools", ordering="tool_count")
     def tool_count(self, obj):
-        return obj.tools.count()
+        return obj.tool_count
 
 
 @admin.register(Tool)
