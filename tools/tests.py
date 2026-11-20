@@ -379,7 +379,7 @@ class SsoTemplateTests(TestCase):
 
     @override_settings(OIDC_ENABLED=True, OIDC_PROVIDER_NAME="Authentik", SOCIALACCOUNT_PROVIDERS=SSO_PROVIDERS)
     def test_sign_in_buttons_with_oidc(self):
-        self.assertContains(self.client.get(reverse("home")), "Sign in")
+        self.assertNotContains(self.client.get(reverse("home")), "Sign in")
         self.assertContains(self.client.get(reverse("admin:login")), "Sign in with Authentik")
 
     def test_sign_out_when_signed_in(self):

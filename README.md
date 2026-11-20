@@ -54,8 +54,8 @@ new **Woodshop** area.
 ## Single sign-on (OpenID Connect)
 
 People can sign in with an OpenID Connect provider such as Authentik. It's
-off until `OIDC_CLIENT_ID` is set. When it's on, there's a **Sign in** link
-in the header and a **Sign in with …** button on the admin login page. The
+off until `OIDC_CLIENT_ID` is set. When it's on, there's a **Sign in with …**
+button on the admin login page. The
 admin's password login still works, so a local superuser can always get in.
 
 Each time someone signs in with SSO:
